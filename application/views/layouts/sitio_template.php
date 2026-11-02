@@ -320,7 +320,7 @@ function quitarArt(idArticulo, reloadPage, deleteAll)
 
 </style>
 
-    <body class="scroll-assist">
+    <body>
         <?php
         // ---------- Header ----------
         $hd_usuario = isset($this->session->userdata("user_data")[0]->idusuario) ? $this->session->userdata("user_data")[0] : null;
