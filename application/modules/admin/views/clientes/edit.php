@@ -135,8 +135,10 @@ $(document).ready(function()
 								<div class="control-group">
 									<label class="control-label" for="clave">Contraseña</label>
 									<div class="controls">
-										<?php $clave = (isset($row->clave))?$row->clave:''; ?>
-										<input type="text" class="input-xxlarge" name="clave" id="clave" value="<?php  echo set_value('clave', $clave); ?>">
+										<input type="password" class="input-xxlarge" name="clave" id="clave" value="" autocomplete="new-password">
+										<?php if (isset($row->idusuario)): ?>
+										<span class="help-block">Dejar vacío para no cambiarla. Las contraseñas se guardan encriptadas y no se pueden ver.</span>
+										<?php endif; ?>
 									</div>
 								</div>
 

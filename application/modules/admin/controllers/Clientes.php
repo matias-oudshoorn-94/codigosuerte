@@ -119,6 +119,10 @@ class Clientes extends MY_Controller
 	function update()
 	{
 		$this->form_validation->set_rules('nombre', 'Nombre', 'required');
+		if ((int) $this->input->post('id') === 0)
+		{
+			$this->form_validation->set_rules('clave', 'Contraseña', 'required');
+		}
 		
 		if ($this->form_validation->run() == FALSE)
 		{
@@ -153,13 +157,19 @@ class Clientes extends MY_Controller
 				'nombre' => $this->input->post('nombre'),
 				'apellido' => $this->input->post('apellido'),
 				'usuario' => $this->input->post('usuario'),
-				'clave' => $this->input->post('clave'),
 				'telefono' => $this->input->post('telefono'),
 				'email' => $this->input->post('email'),
 				'activo'=> $this->input->post('activo'),
 				'caja_cerrada'=> $this->input->post('caja_cerrada'),
 
 			);
+
+			// La clave solo se cambia si se escribio una nueva; se guarda encriptada
+			$clave = (string) $this->input->post('clave');
+			if ($clave !== '')
+			{
+				$objeto['clave'] = Clientes_model::encriptar_clave($clave);
+			}
 						
 			if($id==0)
 			{
@@ -285,7 +295,23 @@ class Clientes extends MY_Controller
 		$this->sub_index($this->input->post('sub_id'));
 	}
 
+	/**
+	 * Historial de contadores de una impresora (AJAX desde la ficha de la impresora).
+	 * Reemplaza a include/historial_impresora.php.
+	 */
+	function historial_impresora()
+	{
+		$filas = $this->db->select('fecha, impresiones')
+			->where('id_impresora', (string) $this->input->post('impresora'))
+			->order_by('fecha', 'ASC')
+			->get('detalles_impresoras')
+			->result();
 
-
+		echo '<table class="table table-striped"><thead><tr><th scope="col">Fecha</th><th scope="col">Impresiones agregadas</th></tr></thead><tbody>';
+		foreach ($filas as $fila)
+		{
+			echo '<tr><td>'.html_escape($fila->fecha).'</td><td>'.(int) $fila->impresiones.'</td></tr>';
+		}
+		echo '</tbody></table>';
+	}
 }
-

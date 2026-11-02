@@ -78,7 +78,7 @@ function historial_impresora($codigo_impresora)
 
           $.ajax({
               type: "POST",
-              url: 'http://codigosuerte.com.ar/include/historial_impresora.php', 
+              url: '<?php echo site_url('admin/clientes/historial_impresora') ?>', 
               data: {impresora: impresora},
               success: function (data) {
               $("#resultado_historial").html(data);

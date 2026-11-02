@@ -1,19 +1,15 @@
 <?php
-define('DEBUG', true);
+/*
+ * Datos de conexion para scripts sueltos (fuera de CodeIgniter).
+ * Se leen de application/config/database.php para tener una sola fuente.
+ */
+defined('BASEPATH') OR define('BASEPATH', dirname(__DIR__).'/system/');
+defined('ENVIRONMENT') OR define('ENVIRONMENT', getenv('CI_ENV') ?: 'production');
 
-if(DEBUG == true):
-    ini_set('display_errors', 'On');
-    error_reporting(E_ALL ^ E_DEPRECATED);
-else:
-    ini_set('display_errors', 'Off');
-    error_reporting(0);
-endif;
+include dirname(__DIR__).'/application/config/database.php';
 
-$path = $_SERVER['DOCUMENT_ROOT'].'/';
-$live_site = 'http://codigosuerte.com.ar/';
-
-$servername = getenv('DB_HOST') ?: "localhost";
-$username = getenv('DB_USER') ?: "u245081402_codigosuerte";
-$password = getenv('DB_PASS') ?: "hlD@Dh5No^5O";
-$dbname = getenv('DB_NAME') ?: "u245081402_codigosuerte";
-if (getenv('DB_PORT')) { ini_set('mysqli.default_port', getenv('DB_PORT')); }
+$servername = $db['default']['hostname'];
+$username   = $db['default']['username'];
+$password   = $db['default']['password'];
+$dbname     = $db['default']['database'];
+$dbport     = $db['default']['port'] !== '' ? (int) $db['default']['port'] : NULL;

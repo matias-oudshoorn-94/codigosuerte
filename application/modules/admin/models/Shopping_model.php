@@ -59,72 +59,6 @@ class Shopping_model extends CI_Model{
 		return $ret;
 	}
 
-	function get_cart($cliente)
-{
-    $query = $this->db->query("SELECT * FROM shopping WHERE cod_clie = '$cliente'");
-    return $query->result();
-}
-
-
-
-	function check_item($cliente, $product)
-	{
-		$query = "SELECT * FROM shopping WHERE cod_clie='$cliente' AND product='$product' ";
-
-		$result = $this->db->query($query);
-
-		if($result->num_rows() > 0)
-		{
-			$row =  $result->row();
-			return $row->quantity;
-		}
-		else
-		{
-			return 0;
-		}
-
-	}
-
-	function add_item($session, $product, $quantity, $cliente)
-	{
-		$qty = $this->check_item($cliente, $product);
-		fputs(fopen("qty.txt","w"),print_r($qty,true));
-		if($qty == 0)
-		{
-			$query = "INSERT INTO shopping (session, product, quantity, cod_clie) VALUES ";
-			$query .= "('$session', '$product', '$quantity', '$cliente') ";
-			error_log($query);
-			//log_message('add_item', $query);
-			$this->db->query($query);
-		}
-		else
-		{
-			$quantity = (int) $quantity + (int) $qty;
-			$query = "UPDATE shopping SET quantity='$quantity' WHERE cod_clie='$cliente' AND ";
-			$query .= "product='$product' ";
-			error_log($query);
-			//log_message('add_item', $query);
-			//mail("marcelodangelo@axislab.com","Query", $query, "From: info@fourwitch.com.ar<info@fourwitch.com.ar>\r\n");
-			//fputs(fopen("query.txt","w"),print_r($query,true));
-			$this->db->query($query);
-		}
-	}
-
-	function delete_item($cliente, $product)
-	{
-		$query = "DELETE FROM shopping WHERE cod_clie='$cliente' AND product='$product' ";
-
-		//error_log($query);
-		$this->db->query($query);
-	}
-
-	function modify_quantity($cliente, $product, $quantity)
-	{
-		$query = "UPDATE shopping SET quantity='$quantity' WHERE cod_clie='$cliente'
-				  AND product='$product' ";
-		$this->db->query($query);
-	}
-
 	function get_cart_detailed($cliente)
 {
     $this->db->select('shopping.product, shopping.quantity, productos.nombre, productos.precio_final');
@@ -135,213 +69,153 @@ class Shopping_model extends CI_Model{
     return $query->result();
 }
 
-	function modify_espec($cliente, $product, $espec)
+	/**
+	 * Cantidad de un producto en el carrito de la sucursal (0 si no esta).
+	 */
+	function check_item($cliente, $product)
 	{
-		$query = "UPDATE shopping SET espec = '$espec' WHERE cod_clie='$cliente'
-				  AND product='$product' ";
-		$this->db->query($query);
+		$row = $this->db->select('quantity')
+			->where('cod_clie', $cliente)
+			->where('product', $product)
+			->get('shopping')
+			->row();
+
+		return $row ? $row->quantity : 0;
 	}
 
+	/**
+	 * Agrega un producto al carrito o suma la cantidad si ya estaba.
+	 */
+	function add_item($session, $product, $quantity, $cliente)
+	{
+		$product  = (int) $product;
+		$quantity = (int) $quantity;
+		if ($product <= 0 || $quantity <= 0)
+		{
+			return;
+		}
+
+		$qty = (int) $this->check_item($cliente, $product);
+		if ($qty == 0)
+		{
+			$this->db->insert('shopping', array(
+				'session'  => (string) $session,
+				'product'  => $product,
+				'quantity' => $quantity,
+				'cod_clie' => $cliente,
+			));
+		}
+		else
+		{
+			$this->modify_quantity($cliente, $product, $qty + $quantity);
+		}
+	}
+
+	function delete_item($cliente, $product)
+	{
+		$this->db->where('cod_clie', $cliente)
+			->where('product', $product)
+			->delete('shopping');
+	}
+
+	function modify_quantity($cliente, $product, $quantity)
+	{
+		$this->db->set('quantity', (int) $quantity)
+			->where('cod_clie', $cliente)
+			->where('product', $product)
+			->update('shopping');
+	}
+
+	function clear_cart($cliente)
+	{
+		$this->db->where('cod_clie', $cliente)->delete('shopping');
+	}
+
+	/**
+	 * Total del carrito con los precios actuales de los productos.
+	 */
 	function cart_total($cliente)
 	{
-		$query = "SELECT * FROM shopping WHERE cod_clie='$cliente' ";
-		$result = $this->db->query($query);
-		$total = 0;
+		$row = $this->db->select('SUM(productos.precio_final * shopping.quantity) AS total', FALSE)
+			->from('shopping')
+			->join('productos', 'productos.id = shopping.product')
+			->where('shopping.cod_clie', $cliente)
+			->get()
+			->row();
 
-		if($result->num_rows() > 0)
-		{
-			//while($row = mysqli_fetch_object($result))
-			foreach ($result->result() as $row)
-			{
-				$query = "SELECT precio_final FROM productos WHERE id='$row->product' ";
-				$invResult = $this->db->query($query);
-				//$row_price = mysqli_fetch_object($invResult);
-				$row_price =  $invResult->row();
-				$total += ($row_price->precio_final * $row->quantity);
-			}
-		}
-		return $total;
+		return $row && $row->total !== NULL ? $row->total : 0;
 	}
 
-	function display_contents($cliente)
-	{
-		$count = 0;
-		$query = "SELECT * FROM shopping WHERE cod_clie='$cliente' ORDER BY id ";
-		$result = $this->db->query($query);
-		//while($row = mysqli_fetch_object($result))
-		foreach ($result->result() as $row)
-		{
-			$query = "SELECT * FROM productos WHERE id='$row->product' ";
-			$result_inv = $this->db->query($query);
-			//$row_inventory = mysqli_fetch_object($result_inv);
-		 	$row_inventory =  $result_inv->row();
-			$contents["product"][$count] = $row_inventory->id_articu;
-			$contents["price"][$count] = $row_inventory->precio_final;
-			$contents["quantity"][$count] = $row->quantity;
-			$contents["total"][$count] = ($row_inventory->precio_final * $row->quantity);
-			$contents["description"][$count] = $row_inventory->n_articu;
-			$contents["espec"][$count] = $row->espec;
-			$count++;
-		}
-		$total = $this->cart_total($cliente);
-		$contents["final"] = $total;
-		$contents["cantidad"] = $count;
-		return $contents;
-	}
-
-	function num_items($cliente)
-	{
-		$query = "SELECT * FROM shopping WHERE cod_clie='$cliente'";
-		$result = $this->db->query($query);
-		//$num_rows = mysqli_num_rows($result);
-		$numRows = $result->num_rows();
-		return $num_rows;
-	}
-
-	function quant_items($cliente)
-	{
-		$quant = 0;
-		$query = "SELECT * FROM shopping WHERE cod_clie='$cliente'";
-		$result = $this->db->query($query);
-		//while($row = mysqli_fetch_object($result))
-		foreach ($result->result() as $row)	$quant += $row->quantity;
-		return $quant;
-	}
-
+	/**
+	 * Convierte el carrito en un pedido: guarda pedido y detalle, descuenta
+	 * stock de la sucursal y suma la venta a la caja del dia.
+	 */
 	function send($cliente, $modo_de_pago)
 	{
 		$this->load->model('admin/stockproductos_model', 'modelo_stock', TRUE);
 
 		$idusuario_sucursal = $this->session->userdata("user_data")[0]->idusuario;
-
+		$modo_de_pago = (string) $modo_de_pago;
 		$total = $this->cart_total($cliente);
 
-		// 👉 INSERT PEDIDO
-		$this->db->query("INSERT INTO pedidos (cod_clie, total, fecha, modo_de_pago)
-						  VALUES ('$cliente', '$total', NOW(), '$modo_de_pago')");
-
+		$this->db->set('cod_clie', $cliente)
+			->set('total', $total)
+			->set('fecha', 'NOW()', FALSE)
+			->set('modo_de_pago', $modo_de_pago)
+			->insert('pedidos');
 		$idpedido = $this->db->insert_id();
 
-		// 👉 DETALLE + STOCK
-		$result = $this->db->query("
-			SELECT product, SUM(quantity) AS quantity
-			FROM shopping
-			WHERE cod_clie='$cliente'
-			GROUP BY product
-		");
+		// Detalle + stock
+		$items = $this->db->select('product, SUM(quantity) AS quantity', FALSE)
+			->where('cod_clie', $cliente)
+			->group_by('product')
+			->get('shopping')
+			->result();
 
-		foreach ($result->result() as $row)
+		foreach ($items as $row)
 		{
-			$this->db->query("INSERT INTO pedidosdetalles (idpedido, id_articu, cantidad)
-							  VALUES ('$idpedido', '$row->product', '$row->quantity')");
+			$this->db->insert('pedidosdetalles', array(
+				'idpedido'  => $idpedido,
+				'id_articu' => $row->product,
+				'cantidad'  => $row->quantity,
+			));
 
-			$this->db->where('producto_id', $row->product);
-			$this->db->where('idusuario', $idusuario_sucursal);
-			$stock_result = $this->db->get('stock_sucursal');
+			$stock = $this->db->select('stock')
+				->where('producto_id', $row->product)
+				->where('idusuario', $idusuario_sucursal)
+				->get('stock_sucursal')
+				->row();
 
-			$nuevo_stock = 0;
-
-			if ($stock_result->num_rows() > 0) {
-				$stock_actual = $stock_result->row()->stock;
-				$nuevo_stock = max(0, $stock_actual - $row->quantity);
-			}
-
+			$nuevo_stock = $stock ? max(0, $stock->stock - $row->quantity) : 0;
 			$this->modelo_stock->save_or_update($row->product, $idusuario_sucursal, $nuevo_stock);
 		}
 
-		// =====================================================
-// ✅ ACTUALIZAR CAJA DIARIA (VERSIÓN SIMPLE Y SEGURA)
-// =====================================================
-
-$fecha_hoy = date('Y-m-d');
-
-// Inicializar montos
-$efectivo = 0;
-$tarjeta = 0;
-$medio = 0;
-$transferencia = 0;
-
-// Sumar SOLO esta venta según medio de pago
-if ($modo_de_pago == 'Efectivo') {
-    $efectivo = $total;
-} elseif ($modo_de_pago == 'Tarjeta de crédito/débito') {
-    $tarjeta = $total;
-} elseif ($modo_de_pago == 'Medio electrónico') {
-    $medio = $total;
-} elseif ($modo_de_pago == 'Transferencia/QR') {
-    $transferencia = $total;
-}
-
-// Buscar si ya existe caja del día
-$caja = $this->db->get_where('cajas_diarias', [
-    'fecha' => $fecha_hoy,
-    'id_usuario' => $cliente
-])->row();
-
-if ($caja) {
-    // UPDATE (sumando)
-    $this->db->where('id', $caja->id);
-    $this->db->update('cajas_diarias', [
-        'cantidad_ventas' => $caja->cantidad_ventas + 1,
-        'total' => $caja->total + $total,
-        'total_efectivo' => $caja->total_efectivo + $efectivo,
-        'total_tarjeta' => $caja->total_tarjeta + $tarjeta,
-        'total_medio_electronico' => $caja->total_medio_electronico + $medio,
-        'total_transferencia' => $caja->total_transferencia + $transferencia
-    ]);
-} else {
-    // INSERT (primera venta del día).
-    // Con el índice único (id_usuario, fecha), si otra venta creó la fila
-    // al mismo tiempo, se suma sobre ella en lugar de duplicarla.
-    $this->db->query(
-        "INSERT INTO cajas_diarias (id_usuario, fecha, cantidad_ventas, total, total_efectivo, total_tarjeta, total_medio_electronico, total_transferencia)
-         VALUES (?, ?, 1, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-            cantidad_ventas = cantidad_ventas + 1,
-            total = total + VALUES(total),
-            total_efectivo = total_efectivo + VALUES(total_efectivo),
-            total_tarjeta = total_tarjeta + VALUES(total_tarjeta),
-            total_medio_electronico = total_medio_electronico + VALUES(total_medio_electronico),
-            total_transferencia = total_transferencia + VALUES(total_transferencia)",
-        array($cliente, $fecha_hoy, $total, $efectivo, $tarjeta, $medio, $transferencia)
-    );
-}
-	}
-
-
-
-
-	function clear_cart($cliente)
-	{
-		$query = "DELETE FROM shopping WHERE cod_clie='$cliente' ";
-		$this->db->query($query);
-	}
-
-	function display_pedidos($cliente)
-	{
-		$count = 0;
-		$query = "SELECT * FROM shopping WHERE cod_clie='$cliente'";
-		$result = $this->db->query($query);
-		//while($row = mysqli_fetch_object($result))
-		foreach ($result->result() as $row)
-		{
-			$query = "SELECT * FROM productos WHERE id='$row->product' ";
-			$result_inv = $this->db->query($query);
-			//$row_inventory = mysqli_fetch_object($result_inv);
-			$row_inventory =  $result_inv->row();
-			$contents["product"][$count] = $row_inventory->id;
-			$contents["price"][$count] = $row_inventory->precio_final;
-			$contents["quantity"][$count] = $row->quantity;
-			$contents["total"][$count] = ($row_inventory->precio_final * $row->quantity);
-			$count++;
+		// Sumar la venta a la caja del dia segun el medio de pago
+		$fecha_hoy = date('Y-m-d');
+		$efectivo = $tarjeta = $medio = $transferencia = 0;
+		if ($modo_de_pago == 'Efectivo') {
+			$efectivo = $total;
+		} elseif ($modo_de_pago == 'Tarjeta de crédito/débito') {
+			$tarjeta = $total;
+		} elseif ($modo_de_pago == 'Medio electrónico') {
+			$medio = $total;
+		} elseif ($modo_de_pago == 'Transferencia/QR') {
+			$transferencia = $total;
 		}
-		$total = $this->cart_total($cliente);
-		$contents["final"] = $total;
-		$contents["cantidad"] = $count;
-		return $contents;
+
+		// Con el indice unico (id_usuario, fecha), si la caja del dia ya existe
+		// se suma sobre ella en lugar de duplicarla.
+		$this->db->query(
+			"INSERT INTO cajas_diarias (id_usuario, fecha, cantidad_ventas, total, total_efectivo, total_tarjeta, total_medio_electronico, total_transferencia)
+			 VALUES (?, ?, 1, ?, ?, ?, ?, ?)
+			 ON DUPLICATE KEY UPDATE
+				cantidad_ventas = cantidad_ventas + 1,
+				total = total + VALUES(total),
+				total_efectivo = total_efectivo + VALUES(total_efectivo),
+				total_tarjeta = total_tarjeta + VALUES(total_tarjeta),
+				total_medio_electronico = total_medio_electronico + VALUES(total_medio_electronico),
+				total_transferencia = total_transferencia + VALUES(total_transferencia)",
+			array($cliente, $fecha_hoy, $total, $efectivo, $tarjeta, $medio, $transferencia)
+		);
 	}
-
-
-
-
 }

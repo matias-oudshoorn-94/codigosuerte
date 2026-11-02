@@ -9,102 +9,83 @@ class clientes_model extends CI_Model{ /// ???????????? CLIENTES ???????????????
 		parent::__construct();
 	}
 
+	/**
+	 * Login de sucursal. Devuelve ['rows' => [usuario], 'num_rows' => 0|1].
+	 *
+	 * Las claves se guardan encriptadas (password_hash). Si la clave de la
+	 * sucursal todavia esta en texto plano (de antes de la migracion), se
+	 * acepta una vez y se encripta en ese momento.
+	 */
 	function login()
 	{
+		$ret = array('rows' => array(), 'num_rows' => 0);
 
-		$query = $this->db->select('idusuario, clave, nombre, apellido, telefono, email, usuario, domicilio, localidad, caja_cerrada');
-		$this->db->where('usuario', $this->input->post('usuario'));
-		//$this->db->where('clave', md5($this->input->post('clave')));
-		$this->db->where('clave', $this->input->post('clave'));
-		$this->db->where('activo', 1);
-
-
-		$this->db->limit(1);
-
-		$ret['rows'] = $this->db->get($this->tabla)->result();
-		//echo $this->db->last_query();
-		// count query
-		$q = $this->db->select('COUNT(*) as count', FALSE)
-			->from($this->tabla);
-		$this->db->where('usuario', $this->input->post('usuario'));
-		$this->db->where('clave', $this->input->post('clave'));
-		$this->db->where('activo', 1);
-
-		$this->db->limit(1);
-
-		$tmp = $q->get()->result();
-		//echo $this->db->last_query();
-
-		$ret['num_rows'] = $tmp[0]->count;
-
-		return $ret;
-	}
-
-	function registrar()
-	{
-		$query = $this->db->select('idusuario, clave, nombre, apellido, telefono, email, activo');
-		$this->db->where('telefono', $this->input->post('telefono'));
-
-
-		$this->db->limit(1);
-
-		$ret['rows'] = $this->db->get($this->tabla)->result();
-		//echo $this->db->last_query();
-		// count query
-		$q = $this->db->select('COUNT(*) as count', FALSE)
-			->from($this->tabla);
-		$this->db->where('telefono', $this->input->post('telefono'));
-
-		$this->db->limit(1);
-
-		$tmp = $q->get()->result();
-		//echo $this->db->last_query();
-
-		$ret['num_rows'] = $tmp[0]->count;
-
-		if($ret['num_rows'] == 0 && $this->input->post('confir_pass') != $this->input->post('clave'))
+		$usuario = (string) $this->input->post('usuario');
+		$clave   = (string) $this->input->post('clave');
+		if ($usuario === '' || $clave === '')
 		{
-			$ret['num_rows'] = "pass";
+			return $ret;
 		}
 
-		return $ret;
+		$fila = $this->db->select('idusuario, clave, nombre, apellido, telefono, email, usuario, domicilio, localidad, caja_cerrada')
+			->where('usuario', $usuario)
+			->where('activo', 1)
+			->limit(1)
+			->get($this->tabla)
+			->row();
 
+		if ( ! $fila || ! $this->verificar_clave($fila, $clave))
+		{
+			return $ret;
+		}
+
+		unset($fila->clave); // no guardar la clave en la sesion
+		$ret['rows'] = array($fila);
+		$ret['num_rows'] = 1;
+		return $ret;
 	}
 
-	function insertar() 
-	{ 
-		$arr = array();
-		$arr['clave'] = md5($this->input->post('clave'));
-		$arr['nombre'] = $this->input->post('nombre');
-		$arr['apellido'] = $this->input->post('apellido');
-		$arr['telefono'] = $this->input->post('telefono');
-		$arr['email'] = $this->input->post('email');
-	
-		$query = "INSERT INTO usuarios (nombre,apellido,telefono,email,clave,activo) VALUES ('".$arr['nombre']."','".$arr['apellido']."','".$arr['telefono']."','".$arr['email']."','".$arr['clave']."',1)";
-		$this->db->query($query);
-	} 
-
-	function getOne()
+	/**
+	 * Compara la clave ingresada con la guardada y, si hace falta,
+	 * la encripta (o la vuelve a encriptar con el algoritmo actual).
+	 */
+	private function verificar_clave($fila, $clave)
 	{
-		$query = $this->db->select('idusuario, clave, nombre, apellido, telefono, email, activo, localidad, domicilio'); 
-		$this->db->where('email', $this->input->post('email'));
-		$this->db->limit(1);
-		
-		$ret['rows'] = $this->db->get($this->tabla)->result();
-		//echo $this->db->last_query();
-		// count query
-		$q = $this->db->select('COUNT(*) as count', FALSE)
-			->from($this->tabla);
-		$this->db->where('email', $this->input->post('email'));
-		$this->db->limit(1);			
-		
-		$tmp = $q->get()->result();
-		//echo $this->db->last_query();
-		
-		$ret['num_rows'] = $tmp[0]->count;
-		
-		return $ret;
+		$guardada = (string) $fila->clave;
+		$info = password_get_info($guardada);
+
+		if ($info['algo'] === NULL || $info['algo'] === 0)
+		{
+			// Clave vieja en texto plano
+			if ( ! hash_equals($guardada, $clave))
+			{
+				return FALSE;
+			}
+		}
+		elseif ( ! password_verify($clave, $guardada))
+		{
+			return FALSE;
+		}
+
+		if ($info['algo'] === NULL || $info['algo'] === 0 || password_needs_rehash($guardada, PASSWORD_BCRYPT))
+		{
+			$this->db->where($this->id, $fila->idusuario)
+				->update($this->tabla, array('clave' => self::encriptar_clave($clave)));
+		}
+
+		return TRUE;
 	}
+
+	/**
+	 * Encripta una clave para guardarla en usuarios.clave (varchar 60).
+	 */
+	public static function encriptar_clave($clave)
+	{
+		return password_hash((string) $clave, PASSWORD_BCRYPT);
+	}
+
+ 
+
 
 	function save($objeto)
 	{
@@ -123,36 +104,7 @@ class clientes_model extends CI_Model{ /// ???????????? CLIENTES ???????????????
 		$this->db->delete($this->tabla);
 	}
 
-	function updatePass($id_cliente, $pass)
-	{
-		//$query = "UPDATE usuarios SET clave='$pass' WHERE idusuario='$id_cliente' ";
-		$query = "UPDATE usuarios SET clave = '".$pass."' WHERE idusuario = '".$id_cliente."' ";
-		$this->db->query($query);
-		echo $this->db->last_query();
-	}
 
-	function texto_aleatorio ($long = 5, $letras_min = true, $letras_max = true, $num = true) 
-	{
-		$salt = $letras_min?'abchefghknpqrstuvwxyz':'';
-		$salt .= $letras_max?'ACDEFHKNPRSTUVWXYZ':'';
-		$salt .= $num?(strlen($salt)?'2345679':'0123456789'):'';
-		if (strlen($salt) == 0)
-		{
-			return '';
-		}
-		$i = 0;
-		$str = '';
-
-		srand((double)microtime()*1000000);
-		
-		while ($i < $long) 
-		{
-			$num = rand(0, strlen($salt)-1);
-			$str .= substr($salt, $num, 1);
-			$i++;
-		}
-		return $str;
-	}
 
 
 	function getAll($objeto = array())

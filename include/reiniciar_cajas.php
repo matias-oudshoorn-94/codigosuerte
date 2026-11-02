@@ -1,23 +1,18 @@
-<?php 
+<?php
+/*
+ * Reabre todas las cajas (caja_cerrada = 2). Pensado para correr una vez por dia
+ * como tarea programada del hosting.
+ */
+include __DIR__.'/configuration.php';
 
-include("configuration.php");
-include("funciones.php");
-
-// Create connection
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-mysqli_set_charset($conn, 'utf8');
-// Check connection
-if ($conn->connect_error) 
+$conn = new mysqli($servername, $username, $password, $dbname, $dbport);
+if ($conn->connect_error)
 {
-   die("Falló la conexión: " . $conn->connect_error);
+	http_response_code(500);
+	exit('Falló la conexión');
 }
 
-$sql = "UPDATE usuarios SET caja_cerrada = 2";
+$conn->query('UPDATE usuarios SET caja_cerrada = 2');
+$conn->close();
 
-$conn->query($sql);
-
-echo "Se reiniciaron todas las cajas diarias";
-
-
-?>
+echo 'Se reiniciaron todas las cajas diarias';

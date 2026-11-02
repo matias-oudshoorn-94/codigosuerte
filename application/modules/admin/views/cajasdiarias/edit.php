@@ -1,22 +1,12 @@
 <?php
 
 
-// Create connection
-
-// Reutiliza la conexion de CodeIgniter (config/database.php)
-$conn = get_instance()->db->conn_id;
-
-
-$sql = "SELECT * FROM pedidos WHERE fecha = '".$row->fecha."' AND cod_clie = '".$row->id_usuario."' order by idpedido asc";
-
-if ($conn->query($sql) === TRUE) {
-            //echo "New record created successfully";
-} else
-{
-            //echo "Error: " . $sql5 . "<br>" . $conn->error;
-}
-
-$resultado_ventas = mysqli_query($conn,$sql);
+// Ventas del dia de esta caja
+$ventas = isset($row) ? $this->db->where('fecha', $row->fecha)
+	->where('cod_clie', $row->id_usuario)
+	->order_by('idpedido', 'ASC')
+	->get('pedidos')
+	->result_array() : array();
 
 ?>
 
@@ -117,7 +107,7 @@ $('.form').eq(0).find('input').eq(0).focus();
 
 										$contador_ventas = 0;
 
-										while ($fila = mysqli_fetch_array($resultado_ventas))
+										foreach ($ventas as $fila)
 									    {
 									      $fecha_hora = $fila['fecha_hora'];
 									      $modo_pago = $fila['modo_de_pago'];
@@ -136,27 +126,21 @@ $('.form').eq(0).find('input').eq(0).focus();
 
 									      		<?php
 
-									      		$sql2 = "SELECT pedidosdetalles.id_articu, pedidosdetalles.cantidad, productos.nombre as nombre FROM pedidosdetalles LEFT JOIN productos ON pedidosdetalles.id_articu = productos.id  WHERE idpedido = '".$fila['idpedido']."' ";
+									      		$detalles_ventas = $this->db->select('pedidosdetalles.id_articu, pedidosdetalles.cantidad, productos.nombre AS nombre')
+													->from('pedidosdetalles')
+													->join('productos', 'pedidosdetalles.id_articu = productos.id', 'left')
+													->where('idpedido', $fila['idpedido'])
+													->get()
+													->result_array();
 
-									      		//echo $sql2;
-
-												if ($conn->query($sql) === TRUE) {
-												            //echo "New record created successfully";
-												} else
-												{
-												            //echo "Error: " . $sql5 . "<br>" . $conn->error;
-												}
-
-												$detalles_ventas = mysqli_query($conn,$sql2);
-
-												while ($fila2 = mysqli_fetch_array($detalles_ventas))
+												foreach ($detalles_ventas as $fila2)
 											    {
 											      $articulo = $fila2['id_articu'];
 											      $cantidad = $fila2['cantidad'];
 											      $nombre = $fila2['nombre'];
 											      ?>
 
-											      <div><font style="font-size: 12px;font-weight: 600">Articulo: <?php echo $nombre ?>, Cantidad: <?php echo $cantidad?> </font></div>
+											      <div><font style="font-size: 12px;font-weight: 600">Articulo: <?php echo html_escape($nombre) ?>, Cantidad: <?php echo $cantidad?> </font></div>
 
 											      <?php
 

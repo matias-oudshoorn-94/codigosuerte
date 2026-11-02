@@ -334,7 +334,7 @@ $fecha_hoy = $dias[date('w')].' '.date('j').' de '.$meses[date('n')];
     function numero(n) { return new Intl.NumberFormat('es-AR').format(n); }
 
     // Impresiones aproximadas según las ventas del día
-    $.post(URL_BASE + 'include/impresiones_aprox.php', { codigo_cliente: CODIGO_CLIENTE })
+    $.post(URL_BASE + 'sitio/caja/impresiones_aprox', { codigo_cliente: CODIGO_CLIENTE })
         .done(function (data) {
             impresionesAprox = parseInt(data, 10) || 0;
             document.getElementById('impresiones').textContent = numero(impresionesAprox);
@@ -382,7 +382,7 @@ $fecha_hoy = $dias[date('w')].' '.date('j').' de '.$meses[date('n')];
 
             boton.disabled = true;
             cargando(true);
-            $.post(URL_BASE + 'include/declarar_impresora.php', {
+            $.post(URL_BASE + 'sitio/caja/declarar_impresora', {
                 codigo_cliente: CODIGO_CLIENTE,
                 codigo_impresora: codigo,
                 cantidad_impresiones_hoy: copias,
@@ -450,7 +450,7 @@ $fecha_hoy = $dias[date('w')].' '.date('j').' de '.$meses[date('n')];
         this.disabled = true;
         cargando(true);
 
-        $.post(URL_BASE + 'include/cerrar_caja.php', {
+        $.post(URL_BASE + 'sitio/caja/cerrar', {
             codigo_cliente: CODIGO_CLIENTE,
             efectivo: RESUMEN.efectivo,
             tarjeta: RESUMEN.tarjeta,

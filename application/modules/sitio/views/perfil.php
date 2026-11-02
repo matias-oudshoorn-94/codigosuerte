@@ -9,7 +9,7 @@ if (!isset($this->session->userdata("user_data")[0]->idusuario))
 $sucursal_id = (int)$this->session->userdata("user_data")[0]->idusuario;
 
 // Datos actuales de la base (los de la sesión son del momento del login)
-$usuario = $this->db->select('usuario, clave, nombre, apellido, telefono, email, domicilio, localidad, caja_cerrada')
+$usuario = $this->db->select('usuario, nombre, apellido, telefono, email, domicilio, localidad, caja_cerrada')
     ->where('idusuario', $sucursal_id)->get('usuarios')->row();
 if (!$usuario)
 {
@@ -127,8 +127,6 @@ $iniciales = strtoupper($iniciales);
 
 .pf-clave { display: inline-flex; align-items: center; gap: 8px; }
 .pf-clave code { font-family: inherit; font-size: 14px; font-weight: 600; background: none; color: var(--pf-texto); padding: 0; letter-spacing: .08em; }
-.pf-mostrar { border: 0; background: var(--pf-fondo); color: var(--pf-texto-suave); font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
-.pf-mostrar:hover { color: var(--pf-texto); }
 
 /* Este mes */
 .pf-mes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -232,8 +230,7 @@ $iniciales = strtoupper($iniciales);
                             <dt>Contraseña</dt>
                             <dd>
                                 <span class="pf-clave">
-                                    <code id="pf-clave" data-oculta="1">••••••••</code>
-                                    <button type="button" class="pf-mostrar" id="pf-mostrar">Mostrar</button>
+                                    <code>••••••••</code>
                                 </span>
                             </dd>
                         </div>
@@ -272,16 +269,3 @@ $iniciales = strtoupper($iniciales);
     </div>
 </section>
 
-<script type="text/javascript">
-(function () {
-    var clave = <?php echo json_encode((string)$usuario->clave, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-    var campo = document.getElementById('pf-clave');
-    var boton = document.getElementById('pf-mostrar');
-    boton.addEventListener('click', function () {
-        var oculta = campo.getAttribute('data-oculta') === '1';
-        campo.textContent = oculta ? clave : '••••••••';
-        campo.setAttribute('data-oculta', oculta ? '0' : '1');
-        boton.textContent = oculta ? 'Ocultar' : 'Mostrar';
-    });
-})();
-</script>

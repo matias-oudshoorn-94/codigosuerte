@@ -535,7 +535,7 @@ $medios_pago = array(
     });
 
     function agregarPorCodigoServidor(codigo) {
-        $.post(URL_BASE + 'busqueda/buscar_producto_por_codigo.php', { codigo: codigo })
+        $.post(URL_BASE + 'sitio/caja/producto_por_codigo', { codigo: codigo })
             .done(function (data) {
                 var producto = null;
                 try { producto = data && data.trim() !== '' ? JSON.parse(data) : null; } catch (err) { producto = null; }

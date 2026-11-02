@@ -43,7 +43,6 @@ $route['default_controller'] = "sitio";
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
-$route['enviar_contacto'] = "sitio/enviar_contacto";
 
 $route['enviar_revendedores'] = "sitio/enviar_revendedores";
 
@@ -85,7 +84,6 @@ $route['loginProc'] = "sitio/login_proc";
 
 $route['loginProc_mayorista'] = "sitio/login_proc_mayorista";
 
-$route['registrarseProc'] = "sitio/registrarse_proc";
 
 $route['do_upload'] = "sitio/do_upload";
 
