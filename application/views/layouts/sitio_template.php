@@ -578,86 +578,84 @@ function quitarArt(idArticulo, reloadPage, deleteAll)
 
 
 
-            <footer class="footer-1 bg-dark">
-                <div class="container">
-                    <div class="row">
-                        <div class="col-md-3 col-sm-6">
-                            <img alt="Logo" class="logo" style="max-height: 130px;" src="<?php echo $base_url ?>/img/logo2.png" />
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="widget">
-                                <h6 class="title">SEGUINOS</h6>
-                                <hr>
-                                <ul class="link-list recent-posts">
-                                    <li>
-                                    <a href="https://www.instagram.com/impresospdfcolor/" target="_blank">
-                                        <i class="ti-instagram"></i> /impresospdfcolor
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="https://www.facebook.com/PDFCOLORIMPRESOS/" target="_blank">
-                                        <i class="ti-facebook"></i> /PDFCOLORIMPRESOS
-                                    </a>
-                                </li>
-                                </ul>
-                            </div>
-                            <!--end of widget-->
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="widget">
-                                <h6 class="title">SECCIONES</h6>
-                                <hr>
-                                <ul class="link-list recent-posts">
-                                    <li>
-                                        <a href="<?php echo base_url() ?>hacerPedido">Hacer pedido</a>
-                                    </li>
-                                    <li>
-                                        <a href="<?php echo base_url() ?>calculadorprecios">Calculador de precios</a>
-                                    </li>
-                                    <li>
-                                        <a href="<?php echo base_url() ?>pdfpoint">PDF Points</a>
-                                    </li>
-                                    <li>
-                                        <a href="<?php echo base_url() ?>revendedores">Quiero ser revendedor</a>
-                                    </li>
-                                    <li>
-                                        <a href="<?php echo base_url() ?>blog">Novedades</a>
-                                    </li>
-                                    <li>
-                                        <a href="<?php echo base_url() ?>imprenta_mar_del_plata">Contacto</a>
-                                    </li>
-                                </ul>
-                            </div>
-                            <!--end of widget-->
-                        </div>
-                        <div class="col-md-3 col-sm-6">
-                            <div class="widget">
-                                <h6 class="title">CONTÁCTENOS</h6>
-                                <hr>
-                                <ul class="link-list recent-posts">
-                                    <li>
-                                        <i class="ti-control-forward" style="margin-right: 10px;"></i> <a href="tel:2233021309">(223)3021309</a>
-                                    </li>
-                                    <li>
-                                        <i class="ti-email" style="margin-right: 10px;"></i> <a href="#">info@pdfcolor.com.ar</a>
-                                    </li>
-                                    <li>
-                                        <i class="ti-location-arrow" style="margin-right: 10px;"></i> <a href="#">Ayacucho 3592</a>
-                                    </li>
+            <?php
+            // ---------- Footer ----------
+            if ($hd_usuario)
+            {
+                $ft_grupos = array(
+                    'Ventas' => array(
+                        array('url' => 'nueva_venta', 'texto' => 'Nueva venta',    'icono' => 'ti-plus'),
+                        array('url' => 'pedidos',     'texto' => 'Ventas del día', 'icono' => 'ti-receipt'),
+                        array('url' => 'cerrar_caja', 'texto' => 'Cerrar caja',    'icono' => 'ti-lock'),
+                    ),
+                    'Mi cuenta' => array(
+                        array('url' => 'inicio', 'texto' => 'Inicio',        'icono' => 'ti-home'),
+                        array('url' => 'perfil', 'texto' => 'Mis datos',     'icono' => 'ti-user'),
+                        array('url' => 'logout', 'texto' => 'Cerrar sesión', 'icono' => 'ti-power-off'),
+                    ),
+                );
+            }
+            else
+            {
+                $ft_grupos = array(
+                    'Acceso' => array(
+                        array('url' => 'login', 'texto' => 'Ingresar', 'icono' => 'ti-user'),
+                    ),
+                );
+            }
+            ?>
+            <style type="text/css">
+            .ft { padding: 0; margin: 0; background: #1f2329; color: #9aa4af; font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 14px; border-top: 1px solid rgba(255,255,255,.06); }
+            .ft * { box-sizing: border-box; }
+            .ft a { text-decoration: none; }
+            .ft h2, .ft p, .ft ul { margin: 0; padding: 0; letter-spacing: 0; text-transform: none; }
+            .ft-contenido { max-width: 1170px; margin: 0 auto; padding: 36px 16px 28px; display: flex; gap: 48px; flex-wrap: wrap; }
+            .ft-marca { flex: 1 1 260px; min-width: 0; }
+            .ft-marca img { height: 44px; width: auto; display: block; }
+            .ft-marca p { margin-top: 14px; line-height: 1.6; max-width: 320px; }
+            .ft-grupo { min-width: 160px; }
+            .ft-grupo h2 { font-size: 12px; font-weight: 700; color: #e7eaee; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+            .ft-grupo ul { list-style: none; }
+            .ft-grupo li + li { margin-top: 4px; }
+            .ft-grupo a { display: inline-flex; align-items: center; gap: 10px; padding: 5px 0; color: #b9c0c8; transition: color .12s ease; }
+            .ft-grupo a i { font-size: 13px; color: #6b7785; transition: color .12s ease; }
+            .ft-grupo a:hover, .ft-grupo a:focus { color: #fff; }
+            .ft-grupo a:hover i, .ft-grupo a:focus i { color: #47b475; }
+            .ft-grupo a.activo { color: #fff; font-weight: 600; }
+            .ft-grupo a.activo i { color: #47b475; }
+            .ft-grupo a.salir:hover, .ft-grupo a.salir:hover i { color: #f08b8b; }
+            .ft-pie { border-top: 1px solid rgba(255,255,255,.06); }
+            .ft-pie div { max-width: 1170px; margin: 0 auto; padding: 16px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #6b7785; }
+            @media (max-width: 600px) {
+                .ft-contenido { gap: 28px; padding-top: 28px; }
+                .ft-marca { flex-basis: 100%; }
+                .ft-grupo { flex: 1 1 140px; }
+                .ft-pie div { justify-content: center; text-align: center; }
+            }
+            @media print { .ft { display: none !important; } }
+            </style>
 
-
-                                </ul>
-                            </div>
-                            <!--end of widget-->
-                        </div>
+            <footer class="ft">
+                <div class="ft-contenido">
+                    <div class="ft-marca">
+                        <a href="<?php echo base_url() ?>"><img src="<?php echo $base_url ?>/img/logo2.png" alt="PDF Color"></a>
+                        <p>Sistema de ventas y cierre de caja de las sucursales de PDF Color.</p>
                     </div>
-                    <!--end of row-->
-                    <div class="row">
-                        <div class="col-sm-12">
-                        	<center>
-                            	<span class="sub">&copy; 2021 PDF Color. Todos los derechos reservados. Desarrollado por <a href="#" style="color:#47b475">Matias Oudshoorn.</a></span>
-                        	</center>
+                    <?php foreach ($ft_grupos as $ft_titulo => $ft_links) { ?>
+                        <div class="ft-grupo" role="navigation" aria-label="<?php echo $ft_titulo ?>">
+                            <h2><?php echo $ft_titulo ?></h2>
+                            <ul>
+                                <?php foreach ($ft_links as $ft_link) { ?>
+                                    <li><a href="<?php echo base_url().$ft_link['url'] ?>" class="<?php echo ($hd_pagina === $ft_link['url'] ? 'activo' : '').($ft_link['url'] === 'logout' ? ' salir' : '') ?>"><i class="<?php echo $ft_link['icono'] ?>"></i><?php echo $ft_link['texto'] ?></a></li>
+                                <?php } ?>
+                            </ul>
                         </div>
+                    <?php } ?>
+                </div>
+                <div class="ft-pie">
+                    <div>
+                        <span>&copy; <?php echo date('Y') ?> PDF Color. Todos los derechos reservados.</span>
+                        <span>Desarrollado por Matias Oudshoorn</span>
                     </div>
                 </div>
             </footer>

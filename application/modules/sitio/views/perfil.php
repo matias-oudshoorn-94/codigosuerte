@@ -67,7 +67,7 @@ function pf_valor($texto)
     return $texto === '' ? '<span class="pf-vacio-dato">Sin cargar</span>' : htmlspecialchars($texto);
 }
 
-$nombre_completo = trim($usuario->nombre.' '.$usuario->apellido);
+$nombre_completo = trim($usuario->nombre.' '.$usuario->apellido, ' .');
 // Iniciales: primera letra de las dos primeras palabras (sin signos)
 $palabras = preg_split('/\s+/', trim(preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $nombre_completo)), -1, PREG_SPLIT_NO_EMPTY);
 $iniciales = '';
