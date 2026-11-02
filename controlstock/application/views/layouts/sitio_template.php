@@ -1,0 +1,650 @@
+
+<?php
+
+$base_url = base_url()."application/views/layouts";
+
+//echo($this->session->userdata("user_data")[0]->caja_cerrada);
+
+$servername = "localhost";
+$username = "pdfcolor_codigosuerte";
+$password = "jB&vb!B~sr+5ZPd+";
+$dbname = "pdfcolor_stock";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+mysqli_set_charset($conn, 'utf8');
+// Check connection
+if ($conn->connect_error)
+{
+    die("Falló la conexión: " . $conn->connect_error);
+}
+
+$sql456 = "SELECT caja_cerrada FROM usuarios WHERE idusuario = '".$this->session->userdata("user_data")[0]->idusuario."' ";
+
+
+if ($conn->query($sql) === TRUE)
+{
+    //echo "New record created successfully";
+}
+else
+{
+    //echo "Error: " . $sql5 . "<br>" . $conn->error;
+}
+
+$resultado_caja = mysqli_query($conn,$sql456);
+
+
+while ($fila = mysqli_fetch_array($resultado_caja))
+{
+    $caja_cerrada = $fila['caja_cerrada'];
+}
+
+//echo $caja_cerrada;
+
+
+
+?>
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title><?php echo $template['title'];?></title>
+        <meta name="description" content="<?php echo $meta['description'];?>" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="<?php echo $base_url ?>/css/bootstrap.css" rel="stylesheet" type="text/css" media="all" />
+        <link href="<?php echo $base_url ?>/css/themify-icons.css" rel="stylesheet" type="text/css" media="all" />
+        <link href="<?php echo $base_url ?>/css/flexslider.css" rel="stylesheet" type="text/css" media="all" />
+        <link href="<?php echo $base_url ?>/css/lightbox.min.css" rel="stylesheet" type="text/css" media="all" />
+        <link href="<?php echo $base_url ?>/css/ytplayer.css" rel="stylesheet" type="text/css" media="all" />
+        <link href="<?php echo $base_url ?>/css/theme.css" rel="stylesheet" type="text/css" media="all" />
+        <link href="<?php echo $base_url ?>/css/custom.css" rel="stylesheet" type="text/css" media="all" />
+        <link type="text/css" href="<?php echo $base_url ?>/css/uploader.css" rel="stylesheet" />
+        <link  rel="icon"   href="<?php echo $base_url ?>/img/favicon.png" type="image/png" />
+
+
+
+        <!-- OPEN GRAPH FACEBOOK -->
+
+        <meta property="og:url" content="http://pdfcolor.com.ar" />
+		<meta property="og:type" content="article" />
+		<meta property="og:title" content="Imprenta PDF Color Mar del Plata" />
+		<meta property="og:description" content="Imprenta Mar del Plata. Impresiones laser color A3 y A4 de tesis y libros de la Facultad de Medicina, Kinesiología, Fonoaudiología, Enfermería y Educación Fisica. Imprimí tu pdf online." />
+		<meta property="og:image" content="http://pdfcolor.com.ar/application/views/layouts/img/logo2.png" />
+
+
+		<!-- CARD TWITTER -->
+
+		<meta name="twitter:card" content="summary_large_image">
+		<meta name="twitter:site" content="@pdfcolor">
+		<meta name="twitter:title" content="Imprenta PDF Color Mar del Plata">
+		<meta name="twitter:description" content="Imprenta Mar del Plata. Impresiones laser color A3 y A4 de tesis y libros de la Facultad de Medicina, Kinesiología, Fonoaudiología, Enfermería y Educación Fisica. Imprimí tu pdf online.">
+		<meta name="twitter:image:src" content="http://pdfcolor.com.ar/application/views/layouts/img/logo2.png">
+
+
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet">
+
+
+
+
+        <link href='http://fonts.googleapis.com/css?family=Lato:300,400%7CRaleway:100,400,300,500,600,700%7COpen+Sans:400,500,600' rel='stylesheet' type='text/css'>
+
+            <!-- Whatsapp logo flotante
+
+            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+        <a href="https://api.whatsapp.com/send?phone=5492235395959" class="float" target="_blank">
+        <i class="fa fa-whatsapp my-float"></i>
+        </a>
+
+        -->
+
+
+    </head>
+
+
+    <script>
+
+
+
+    function buscar()
+    {
+      if(document.getElementById('texto_buscar').value == '')
+      {
+        alert("Por favor, ingrese el texto a buscar.");
+      }
+      else
+      {
+        //alert('<?php echo base_url()?>busqueda/'+document.getElementById('texto_buscar').value;);
+        window.location='<?php echo base_url()?>busqueda/'+document.getElementById('texto_buscar').value;
+      }
+    }
+
+    function buscar2()
+    {
+      if(document.getElementById('texto_buscar2').value == '')
+      {
+        alert("Por favor, ingrese el texto a buscar.");
+      }
+      else
+      {
+        //alert('<?php echo base_url()?>busqueda/'+document.getElementById('texto_buscar').value;);
+        window.location='<?php echo base_url()?>busqueda/'+document.getElementById('texto_buscar2').value;
+      }
+    }
+
+    function runScript(e)
+
+    {
+
+        if (event.which == 13 || event.keyCode == 13) {
+
+            buscar();
+
+            return false;
+
+        }
+
+        return true;
+
+    }
+
+    function runScript2(e)
+
+    {
+
+        if (event.which == 13 || event.keyCode == 13) {
+
+            buscar2();
+
+            return false;
+
+        }
+
+        return true;
+
+    }
+
+
+
+function agregarArt(idArticulo, cantidad)
+{
+	//alert (cantidad);
+
+    if (cantidad == "" || cantidad < 1)
+    {
+        alert("La cantidad es incorrecta.");
+        return false;
+    }
+    $.get("<?php echo base_url('sitio/getData') ?>", { idArt: idArticulo, quantity: cantidad }, function(data)
+    {
+
+        var json = JSON.parse(data);
+        var html = "";
+        var cantidad = 0;
+        var total = 0;
+        for (post in json)
+        {
+            //alert(json[post].quantity);
+            //alert(json[post].precio);
+
+            cantidad = cantidad+json[post].quantity*1;
+            total += json[post].precio*json[post].quantity;
+
+            html += /*'<p>'+json[post].nombre+'<br>'+json[post].precio+'</p>';*/
+
+                    '<tr><td class="text-left"><a href="">'+json[post].nombre+'</a></td><td class="text-right">x '+json[post].quantity+'</td><td class="text-right">$'+json[post].precio+'</td><td class="text-right">$'+json[post].precio*cantidad+'</td><td class="text-right"><a onClick="javascript: quitarArt('+json[post].product+', 0, 0)" style="cursor: pointer;font-size: 20px;"><i class="ti-trash" style="vertical-align: middle;"></i></a><input type="number" name="quantity" id="'+json[post].product+'" value="'+json[post].quantity+'" size="1" class="form-control" style="display: initial;border: 1px solid #b9b9b9;width: 59px;height: 30px;padding-left: 10px;margin-left: 10px;font-weight: 500;margin-bottom: 0px;border-radius: 0;margin-right: 10px"/><a onClick="javascript: modificarArt('+json[post].product+', 0)" style="cursor: pointer;font-size: 20px;"><i class="ti-reload" style="vertical-align: middle;"></i></a></td></tr>';
+
+
+        }
+
+
+
+        total = total.toFixed(2);
+        total = new Intl.NumberFormat('de-DE',{minimumFractionDigits: 2, maximunFractionDigits: 2}).format(total);
+        $("#resultado").html('<table class="table table-hover"><thead><tr><th scope="col">Nombre</th><th scope="col" style="text-align: right;">Cantidad</th><th scope="col" style="text-align: right;">Precio</th><th scope="col" style="text-align: right;">Total</th><th scope="col" style="text-align: right;">Acciones</th></tr></thead><tbody>'+html+'</tbody></table>');
+        $("#cart-total").html(cantidad+' item(s) -$'+total);
+        $("#cart-total-bottom").html('<b>TOTAL:</b> $'+total);
+        $("#cart-success"+idArticulo).html('<strong class="label label-success" id="agregado">¡AGREGADO!</strong>');
+        $("#cart-success"+idArticulo).fadeIn( "slow", function() {
+            // Animation complete.
+        });
+        /*$("#cart-success"+idArticulo).fadeOut( "slow", function() {
+            // Animation complete.
+        });*/
+
+        if (total > 0)
+        {
+            $("#cart-buttons").html('<p class="text-right btn-block1"><a style="color:#FFF;background-color:#C5202B;" href="<?php echo base_url() ?>carro">Ver Carro</a>');
+        }
+
+    });
+}//);
+
+
+function modificarArt(idArticulo, cantidad)
+{
+    if (cantidad == "" || cantidad < 1)
+    {
+        alert("La cantidad es incorrecta.");
+        return false;
+    }
+    $.get("<?php echo base_url('sitio/modificarData') ?>", { idArt: idArticulo, quantity: cantidad}, function(data)
+    {
+        window.location.reload();
+    });
+}
+
+
+function quitarArt(idArticulo, reloadPage, deleteAll)
+{
+    $.get("<?php echo base_url('sitio/quitarData') ?>", { idArt: idArticulo, delAll: deleteAll }, function(data)
+    {
+        var json = JSON.parse(data);
+        var html = "";
+        var cantidad = 0;
+        var total = 0;
+        for (post in json)
+        {
+            //alert(json[post].quantity);
+
+            cantidad = cantidad+json[post].quantity*1;
+            total += json[post].precio*json[post].quantity;
+
+            html +=
+                    '<tr><td class="text-left"><a href="">'+json[post].nombre+'</a></td><td class="text-right">x '+json[post].quantity+'</td><td class="text-right">$'+json[post].precio+'</td><td class="text-right">$'+json[post].precio*cantidad+'</td><td class="text-right"><a onClick="javascript: quitarArt('+json[post].product+', 0, 0)" style="cursor: pointer;font-size: 20px;"><i class="ti-trash" style="vertical-align: middle;"></i></a><input type="number" name="quantity" id="'+json[post].product+'" value="'+json[post].quantity+'" size="1" class="form-control" style="display: initial;border: 1px solid #b9b9b9;width: 59px;height: 30px;padding-left: 10px;margin-left: 10px;font-weight: 500;margin-bottom: 0px;border-radius: 0;margin-right: 10px"/><a onClick="javascript: modificarArt('+json[post].product+', 0)" style="cursor: pointer;font-size: 20px;"><i class="ti-reload" style="vertical-align: middle;"></i></a></td></tr>';
+
+        }
+
+        total = total.toFixed(2);
+        total = new Intl.NumberFormat('de-DE',{minimumFractionDigits: 2, maximunFractionDigits: 2}).format(total);
+        $("#resultado").html('<table class="table table-hover"><thead><tr><th scope="col">Nombre</th><th scope="col" style="text-align: right;">Cantidad</th><th scope="col" style="text-align: right;">Precio</th><th scope="col" style="text-align: right;">Total</th><th scope="col" style="text-align: right;">Acciones</th></tr></thead><tbody>'+html+'</tbody></table>');
+        $("#cart-total").html(cantidad+' item(s) -$'+total);
+        $("#cart-total-bottom").html('<b>TOTAL:</b> $'+total);
+
+        if (total == 0)
+        {
+            $("#cart-buttons").html('');
+        }
+
+        if (reloadPage) window.location.reload();
+
+    });
+}//);
+
+
+
+
+
+
+
+    </script>
+
+
+
+<style>
+
+.float{
+    position:fixed;
+    width:60px;
+    height:60px;
+    bottom:40px;
+    right:40px;
+    background-color:#25d366;
+    color:#FFF;
+    border-radius:50px;
+    text-align:center;
+  font-size:30px;
+    box-shadow: 2px 2px 3px #999;
+  z-index:100;
+}
+
+.my-float{
+    margin-top:16px;
+}
+
+.link-list a:after
+{
+    display: none !important
+}
+
+.nav-bar ul li.active > a
+{
+	color: #47b475 !important;
+}
+
+</style>
+
+    <body class="scroll-assist">
+        <div class="nav-container">
+            <a id="top"></a>
+            <nav class="bg-dark">
+
+
+
+                            <?php if (isset($this->session->userdata("user_data")[0]->nombre))
+
+                            {?>
+
+
+                                <div class="nav-utility">
+                                    <div class="module left">
+                                        <span class="sub">¡Bienvenido <?php echo "<b>".$this->session->userdata("user_data")[0]->nombre."</b> "; ?><?php echo "<b>".$this->session->userdata("user_data")[0]->apellido."</b>!";?></span>
+                                    </div>
+
+                                    <div class="module right">
+                                        <span class="sub"><a href="<?php echo base_url() ?>logout" style="font-weight: 500;font-size: 15px;color: #e0e0e0;">Cerrar sesión</a></span>
+                                    </div>
+                                </div>
+
+                            <?php
+
+                        }?>
+
+
+                <div class="nav-bar">
+
+                    <div class="module left">
+                        <a href="<?php echo base_url() ?>">
+                            <img class="logo logo-light" alt="Foundry" src="<?php echo $base_url ?>/img/logo2.png" />
+                            <img class="logo logo-dark" alt="Foundry" src="<?php echo $base_url ?>/img/logo2.png" />
+                        </a>
+                    </div>
+                    <div class="module widget-handle mobile-toggle right visible-sm visible-xs">
+                        <i class="ti-menu"></i>
+                    </div>
+                    <div class="module-group right">
+                        <div class="module left">
+                            <ul class="menu">
+                                <li <?php echo ($seccion=='home')?'class="active"':'';?>>
+                                    <a href="<?php echo base_url() ?>" >
+                                        Inicio
+                                    </a>
+
+                                </li>
+
+
+                                <li class="has-dropdown">
+                                    <a href="#">
+                                        Cuenta
+                                    </a>
+                                    <ul>
+                                        <?php if (isset($this->session->userdata("user_data")[0]->nombre))
+
+                                        {?>
+
+                                        <li>
+                                            <a href="<?php echo base_url() ?>logout">
+                                                Cerrar sesión
+                                            </a>
+                                        </li>
+
+                                        <li>
+                                            <a href="<?php echo base_url() ?>perfil">
+                                                Mis datos
+                                            </a>
+                                        </li>
+
+                                        <?php }
+
+                                         else
+                                        { ?>
+
+                                        <li <?php echo ($seccion=='ingresar')?'class="active"':'';?>>
+                                            <a href="<?php echo base_url() ?>login">
+                                                Ingresar
+                                            </a>
+                                        </li>
+
+
+                                        <?php } ?>
+
+                                    </ul>
+                                </li>
+
+                                <?php if (isset($this->session->userdata("user_data")[0]->nombre))
+
+                                {?>
+
+                                    <li class="has-dropdown">
+                                    <a href="#">
+                                        Ventas
+                                    </a>
+                                    <ul>
+                                        <?php if (isset($this->session->userdata("user_data")[0]->nombre))
+
+                                        {?>
+
+                                        <li>
+                                            <a href="<?php echo base_url() ?>nueva_venta">
+                                                Nueva venta
+                                            </a>
+                                        </li>
+
+                                        <li>
+                                            <a href="<?php echo base_url() ?>pedidos">
+                                                Ventas realizadas
+                                            </a>
+                                        </li>
+
+                                        <li>
+                                            <a href="<?php echo base_url() ?>cerrar_caja">
+                                                Cerrar caja
+                                            </a>
+                                        </li>
+
+                                        <?php }
+
+                                         else
+                                        { ?>
+
+                                        <li <?php echo ($seccion=='ingresar')?'class="active"':'';?>>
+                                            <a href="<?php echo base_url() ?>home">
+                                                Ingresar
+                                            </a>
+                                        </li>
+
+
+                                        <?php } ?>
+
+                                    </ul>
+                                </li>
+
+                                <?php
+                                }?>
+
+
+
+
+                                <!--
+                                <li <?php echo ($seccion=='contacto')?'class="active"':'';?>>
+                                    <a href="<?php echo base_url() ?>imprenta_mar_del_plata">
+                                        Contacto
+                                    </a>
+
+                                </li>
+                            -->
+
+                            </ul>
+                        </div>
+
+                        <?php if (isset($this->session->userdata("mayorista")[0]->nombre))
+
+                        {?>
+
+                        <div class="module widget-handle cart-widget-handle left">
+                            <div class="cart">
+                                <i class="ti-bag"></i>
+                                <span class="label number">2</span>
+                                <span class="title">Carrito</span>
+                            </div>
+                            <div class="function">
+                                <div class="widget">
+                                    <h6 class="title">Carrito</h6>
+                                    <hr>
+                                    <ul class="cart-overview">
+                                        <li>
+                                            <a href="#">
+                                                <div class="description">
+                                                    <span class="product-title">Canvas Backpack</span>
+                                                    <span class="price number">$39.90</span>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#">
+                                                <div class="description">
+                                                    <span class="product-title">Vintage Camera</span>
+                                                    <span class="price number">$249.50</span>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                    <hr>
+                                    <div class="cart-controls">
+                                        <a class="btn btn-sm btn-filled" href="#">Realizar compra</a>
+                                        <div class="list-inline pull-right">
+                                            <span class="cart-total">Total: </span>
+                                            <span class="number">$289.40</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!--end of widget-->
+                            </div>
+                        </div>
+
+                    <?php } ?>
+
+                    </div>
+                    <!--end of module group-->
+                </div>
+            </nav>
+        </div>
+
+
+        <div class="main-container">
+
+        <?php echo $template['body'];?>
+
+		</div>
+
+
+
+            <footer class="footer-1 bg-dark">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6">
+                            <img alt="Logo" class="logo" style="max-height: 130px;" src="<?php echo $base_url ?>/img/logo2.png" />
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="widget">
+                                <h6 class="title">SEGUINOS</h6>
+                                <hr>
+                                <ul class="link-list recent-posts">
+                                    <li>
+                                    <a href="https://www.instagram.com/impresospdfcolor/" target="_blank">
+                                        <i class="ti-instagram"></i> /impresospdfcolor
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://www.facebook.com/PDFCOLORIMPRESOS/" target="_blank">
+                                        <i class="ti-facebook"></i> /PDFCOLORIMPRESOS
+                                    </a>
+                                </li>
+                                </ul>
+                            </div>
+                            <!--end of widget-->
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="widget">
+                                <h6 class="title">SECCIONES</h6>
+                                <hr>
+                                <ul class="link-list recent-posts">
+                                    <li>
+                                        <a href="<?php echo base_url() ?>hacerPedido">Hacer pedido</a>
+                                    </li>
+                                    <li>
+                                        <a href="<?php echo base_url() ?>calculadorprecios">Calculador de precios</a>
+                                    </li>
+                                    <li>
+                                        <a href="<?php echo base_url() ?>pdfpoint">PDF Points</a>
+                                    </li>
+                                    <li>
+                                        <a href="<?php echo base_url() ?>revendedores">Quiero ser revendedor</a>
+                                    </li>
+                                    <li>
+                                        <a href="<?php echo base_url() ?>blog">Novedades</a>
+                                    </li>
+                                    <li>
+                                        <a href="<?php echo base_url() ?>imprenta_mar_del_plata">Contacto</a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <!--end of widget-->
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="widget">
+                                <h6 class="title">CONTÁCTENOS</h6>
+                                <hr>
+                                <ul class="link-list recent-posts">
+                                    <li>
+                                        <i class="ti-control-forward" style="margin-right: 10px;"></i> <a href="tel:2233021309">(223)3021309</a>
+                                    </li>
+                                    <li>
+                                        <i class="ti-email" style="margin-right: 10px;"></i> <a href="#">info@pdfcolor.com.ar</a>
+                                    </li>
+                                    <li>
+                                        <i class="ti-location-arrow" style="margin-right: 10px;"></i> <a href="#">Ayacucho 3592</a>
+                                    </li>
+
+
+                                </ul>
+                            </div>
+                            <!--end of widget-->
+                        </div>
+                    </div>
+                    <!--end of row-->
+                    <div class="row">
+                        <div class="col-sm-12">
+                        	<center>
+                            	<span class="sub">&copy; 2021 PDF Color. Todos los derechos reservados. Desarrollado por <a href="#" style="color:#47b475">Matias Oudshoorn.</a></span>
+                        	</center>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+        <script src="<?php echo $base_url ?>/js/jquery.js"></script>
+        <script src="<?php echo $base_url ?>/js/Jqueryvalidation.js"></script>
+        <script src="<?php echo $base_url ?>/js/jquery.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/bootstrap.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/flickr.js"></script>
+        <script src="<?php echo $base_url ?>/js/flexslider.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/lightbox.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/masonry.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/twitterfetcher.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/spectragram.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/ytplayer.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/countdown.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/smooth-scroll.min.js"></script>
+        <script src="<?php echo $base_url ?>/js/parallax.js"></script>
+        <script src="<?php echo $base_url ?>/js/scripts.js"></script>
+        <script src="<?php echo $base_url ?>/js/uploader.js"></script>
+
+        <script type="text/javascript" charset="utf-8" language="javascript" src="<?php echo $base_url ?>/js/jquery.dataTables.js"></script>
+        <script type="text/javascript" charset="utf-8" language="javascript" src="<?php echo $base_url ?>/js/DT_bootstrap.js"></script>
+
+        <script type="text/javascript" src="<?php echo $base_url ?>/js/vpb_uploader.js"></script>
+
+
+
+        <!-- Our main JS file -->
+        <script src="<?php echo $base_url ?>/assets/js/script.js"></script>
+
+    </body>
+</html>
+
+
+
+
+

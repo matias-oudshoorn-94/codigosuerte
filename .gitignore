@@ -1,0 +1,12 @@
+# Logs
+error_log
+*.log
+*.LOG
+qty.txt
+
+# Archivos del hosting
+.ftpquota
+.well-known/
+
+# Instaladores comprimidos
+*.zip
