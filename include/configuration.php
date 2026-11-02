@@ -13,6 +13,6 @@ $path = $_SERVER['DOCUMENT_ROOT'].'/';
 $live_site = 'http://codigosuerte.com.ar/';
 
 $servername = "localhost";
-$username = "pdfcolor_codigosuerte";
-$password = "jB&vb!B~sr+5ZPd+";
-$dbname = "pdfcolor_codigosuerte";
+$username = "u245081402_codigosuerte";
+$password = "hlD@Dh5No^5O";
+$dbname = "u245081402_codigosuerte";

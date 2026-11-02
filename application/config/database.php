@@ -88,9 +88,9 @@ $db['local']['database'] = 'axisl376_biosegur';
 */
 //mysql_set_charset('utf8');
 $db['local']['hostname'] = 'localhost';
-$db['local']['username'] = 'pdfcolor_codigosuerte';
-$db['local']['password'] = 'jB&vb!B~sr+5ZPd+';
-$db['local']['database'] = 'pdfcolor_codigosuerte';
+$db['local']['username'] = 'u245081402_codigosuerte';
+$db['local']['password'] = 'hlD@Dh5No^5O';
+$db['local']['database'] = 'u245081402_codigosuerte';
 
 
 /*

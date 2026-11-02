@@ -6,9 +6,9 @@ $base_url = base_url()."application/views/layouts";
 
 
 $servername = "localhost";
-$username = "pdfcolor_codigosuerte";
-$password = "jB&vb!B~sr+5ZPd+";
-$dbname = "pdfcolor_codigosuerte";
+$username = "u245081402_codigosuerte";
+$password = "hlD@Dh5No^5O";
+$dbname = "u245081402_codigosuerte";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
