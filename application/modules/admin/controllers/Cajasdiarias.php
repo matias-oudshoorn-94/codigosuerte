@@ -24,7 +24,7 @@ class Cajasdiarias extends MY_Controller
 		$this->data['pag']        = $pag;
 		$this->data['cajas']      = $this->cajas->listar($filtros, $pag['por_pagina'], $pag['offset']);
 		$this->data['totales']    = $this->cajas->totales($filtros);
-		$this->data['sucursales'] = $this->sucursales();
+		$this->data['sucursales'] = $this->lista_sucursales();
 
 		$this->mostrar('admin/cajasdiarias/list', 'Cajas diarias', 'cajas');
 	}
@@ -39,7 +39,7 @@ class Cajasdiarias extends MY_Controller
 			redirect('admin/cajasdiarias');
 		}
 
-		$sucursales = $this->sucursales();
+		$sucursales = $this->lista_sucursales();
 		$this->data['caja'] = $caja;
 		$this->data['sucursal'] = isset($sucursales[(int) $caja->id_usuario]) ? $sucursales[(int) $caja->id_usuario] : NULL;
 		$this->data['ventas'] = $this->cajas->ventas_del_dia($caja->id_usuario, $caja->fecha);

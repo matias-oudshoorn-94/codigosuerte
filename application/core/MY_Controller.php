@@ -74,7 +74,7 @@ class MY_Controller extends MX_Controller
 	/**
 	 * Todas las sucursales (activas e inactivas), indexadas por id.
 	 */
-	protected function sucursales()
+	protected function lista_sucursales()
 	{
 		$lista = array();
 		$filas = $this->db->select('idusuario, usuario, nombre, apellido, localidad, domicilio, activo, caja_cerrada')

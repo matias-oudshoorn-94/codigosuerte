@@ -9,7 +9,7 @@ class Stockproductos extends MY_Controller
 
 	function index()
 	{
-		$sucursales = array_filter($this->sucursales(), function ($s) { return $s->activo == 1; });
+		$sucursales = array_filter($this->lista_sucursales(), function ($s) { return $s->activo == 1; });
 		$q = trim((string) $this->input->get('q'));
 		$filtro = in_array($this->input->get('filtro'), array('sin', 'bajo'), TRUE) ? $this->input->get('filtro') : '';
 		$umbral = max(1, (int) ($this->input->get('umbral') ?: 5));
@@ -66,7 +66,7 @@ class Stockproductos extends MY_Controller
 	{
 		$this->solo_post();
 		$this->load->model('admin/stockproductos_model', 'stock_m');
-		$sucursales = $this->sucursales();
+		$sucursales = $this->lista_sucursales();
 		$cambios = 0;
 
 		$this->db->trans_start();

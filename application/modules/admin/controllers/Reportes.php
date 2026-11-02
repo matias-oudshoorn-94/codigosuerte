@@ -65,7 +65,7 @@ class Reportes extends MY_Controller
 		$hasta_anterior = date('Y-m-d', strtotime($desde.' -1 day'));
 		$desde_anterior = date('Y-m-d', strtotime($hasta_anterior.' -'.($dias - 1).' days'));
 
-		$sucursales = $this->sucursales();
+		$sucursales = $this->lista_sucursales();
 		$sucursal = (int) $this->input->get('sucursal');
 		if ( ! isset($sucursales[$sucursal])) $sucursal = 0;
 

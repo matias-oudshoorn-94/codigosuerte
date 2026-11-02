@@ -42,7 +42,7 @@ class Productos extends MY_Controller
 			redirect('admin/productos');
 		}
 
-		$sucursales = array_filter($this->sucursales(), function ($s) { return $s->activo == 1; });
+		$sucursales = array_filter($this->lista_sucursales(), function ($s) { return $s->activo == 1; });
 		$stock = $id ? $this->productos->stock_por_sucursal($id) : array();
 		$errores = array();
 		$valores = $producto ? (array) $producto : array('porcentaje_marcado' => 50);
