@@ -10,3 +10,6 @@ qty.txt
 
 # Instaladores comprimidos
 *.zip
+
+# Dumps de base de datos (contienen datos reales)
+*.sql
