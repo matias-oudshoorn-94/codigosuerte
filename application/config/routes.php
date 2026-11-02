@@ -132,6 +132,7 @@ $route['nueva_venta'] = "sitio/nueva_venta";
 $route['nueva_venta2'] = "sitio/nueva_venta2";
 
 $route['enviar_pedido'] = "sitio/enviar_pedido";
+$route['venta_generada/(:num)'] = "sitio/venta_generada/$1";
 $route['set_pago'] = "sitio/set_pago";
 
 $route['pedidos'] = "sitio/pedidos";

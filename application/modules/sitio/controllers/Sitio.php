@@ -62,28 +62,17 @@ class Sitio extends MX_Controller
 		{
 
 			$this->session->set_userdata("user_data", $results['rows']);
-
-
-			//redirect();
-			//redirect('sitio/login', 'refresh');
-			$this->template->build('sitio/inicio', $this->data);
-
+			// Redirigir (en vez de mostrar la pagina) para que recargar no reenvie el formulario
+			redirect('inicio');
 		}
-
 		else
-
 		{
-
 			$this->meta['description'] = "Imprenta Mar del Plata. Impresiones laser color A3 y A4 de tesis y libros de la Facultad de Medicina, Kinesiología, Fonoaudiología, Enfermería y Educación Fisica. Imprimí tu pdf online.";
-
 			$this->data['meta'] = $this->meta;
-
-			$this->data['msg'] = "ERROR. Nombre de usuario o contraseña incorrecto.";
-
+			$this->data['msg'] = "Usuario o contraseña incorrectos.";
+			$this->data['usuario_ingresado'] = (string) $this->input->post('usuario');
 			$this->template->title('Iniciar sesión | PDF Color');
-
 			$this->template->build('sitio/login', $this->data);
-
 		}
 
 	}
@@ -203,8 +192,7 @@ class Sitio extends MX_Controller
 		$this->data['meta'] = $this->meta;
 		if (isset($this->session->userdata("user_data")[0]->idusuario))
 		{
-			$this->template->title('PDF Color | Inicio');
-			$this->template->build('sitio/inicio', $this->data);
+			$this->_mostrar_inicio();
 		}
 		else
 		{
@@ -217,11 +205,42 @@ class Sitio extends MX_Controller
 
 	function inicio()
 	{
+		if (!isset($this->session->userdata("user_data")[0]->idusuario))
+			redirect('login');
+
 		$this->meta['description'] = "Imprenta Mar del Plata. Impresiones laser color A3 y A4 de tesis y libros de la Facultad de Medicina, Kinesiología, Fonoaudiología, Enfermería y Educación Fisica. Imprimí tu pdf online.";
 		$this->meta['keywords'] = "";
 		$this->data['meta'] = $this->meta;
-		$this->data['seccion'] = "contacto";
+		$this->_mostrar_inicio();
+	}
 
+	/**
+	 * Panel de la sucursal: datos, estado de la caja y ventas de hoy.
+	 */
+	private function _mostrar_inicio()
+	{
+		$id = (int) $this->session->userdata("user_data")[0]->idusuario;
+		$hoy = date('Y-m-d');
+
+		$sucursal = $this->db->select('usuario, nombre, apellido, localidad, domicilio, caja_cerrada')
+			->where('idusuario', $id)->get('usuarios')->row();
+		if (!$sucursal)
+			$sucursal = $this->session->userdata("user_data")[0];
+
+		$this->data['sucursal'] = $sucursal;
+		$this->data['caja_cerrada_hoy'] = isset($sucursal->caja_cerrada) && $sucursal->caja_cerrada == 1;
+
+		$this->data['ventas_por_medio'] = $this->db->select('modo_de_pago, COUNT(*) AS ventas, COALESCE(SUM(total), 0) AS total', FALSE)
+			->where('cod_clie', $id)->where('fecha', $hoy)
+			->group_by('modo_de_pago')
+			->get('pedidos')->result();
+
+		$this->data['ultimas_ventas'] = $this->db->select('idpedido, fecha_hora, modo_de_pago, total')
+			->where('cod_clie', $id)->where('fecha', $hoy)
+			->order_by('idpedido', 'DESC')->limit(5)
+			->get('pedidos')->result();
+
+		$this->data['seccion'] = "inicio";
 		$this->template->title('Inicio | PDF Color');
 		$this->template->build('sitio/inicio', $this->data);
 	}
@@ -648,18 +667,59 @@ class Sitio extends MX_Controller
 	function enviar_pedido()
 	{
 
+		if (!isset($this->session->userdata("user_data")[0]->idusuario))
+			redirect('login');
+
 		$this->load->model('admin/shopping_model','modelo_carro',TRUE);
 
-		$cliente = $this->session->userdata("user_data")[0]->idusuario;
+		$cliente = (int) $this->session->userdata("user_data")[0]->idusuario;
+		$modo_de_pago = (string) $this->input->get('pago');
 
-		$modo_de_pago = $this->input->get('pago');
+		// Con la caja cerrada no se puede vender (el carrito queda guardado)
+		$usuario = $this->db->select('caja_cerrada')->where('idusuario', $cliente)->get('usuarios')->row();
+		if ($usuario && $usuario->caja_cerrada == 1)
+			redirect('caja_cerrada');
 
-		$this->modelo_carro->send($cliente,$modo_de_pago);
+		// Sin productos o sin medio de pago valido no se genera nada
+		// (por ejemplo, si se recarga la pagina despues de vender)
+		$en_carrito = $this->db->where('cod_clie', $cliente)->count_all_results('shopping');
+		if ($en_carrito == 0 || !isset($this->columnas_medio_pago[$modo_de_pago]))
+			redirect('nueva_venta');
 
+		$idpedido = $this->modelo_carro->send($cliente, $modo_de_pago);
 		$this->modelo_carro->clear_cart($cliente);
 
-		$this->data['rows_carro'] = array();
+		// Redirigir a la confirmacion: recargarla no vuelve a generar la venta
+		redirect('venta_generada/'.(int)$idpedido);
+	}
 
+	/**
+	 * Confirmacion de una venta recien generada.
+	 */
+	function venta_generada($idpedido = 0)
+	{
+		if (!isset($this->session->userdata("user_data")[0]->idusuario))
+			redirect('login');
+
+		$sucursal = (int) $this->session->userdata("user_data")[0]->idusuario;
+
+		$pedido = $this->db->select('idpedido, fecha_hora, modo_de_pago, total')
+			->where('idpedido', (int) $idpedido)
+			->where('cod_clie', $sucursal)
+			->get('pedidos')->row();
+		if (!$pedido)
+			redirect('pedidos');
+
+		$this->data['pedido'] = $pedido;
+		$this->data['items'] = $this->db->select('d.cantidad, p.nombre, p.codigo, p.precio_final')
+			->from('pedidosdetalles d')
+			->join('productos p', 'p.id = d.id_articu', 'left')
+			->where('d.idpedido', $pedido->idpedido)
+			->order_by('d.iddetalle', 'ASC')
+			->get()->result();
+
+		$this->data['seccion'] = "nueva_venta";
+		$this->template->title('Venta generada | PDF Color');
 		$this->template->build('sitio/enviar_pedido', $this->data);
 	}
 
@@ -1030,7 +1090,22 @@ class Sitio extends MX_Controller
 
 		$this->data['meta'] = $this->meta;
 
-		$this->data['seccion'] = "perfil";
+		if (!isset($this->session->userdata("user_data")[0]->idusuario))
+			redirect('login');
+
+		$sucursal = (int) $this->session->userdata("user_data")[0]->idusuario;
+
+		// Si la caja sigue abierta no hay nada que mostrar
+		$usuario = $this->db->select('caja_cerrada')->where('idusuario', $sucursal)->get('usuarios')->row();
+		if (!$usuario || $usuario->caja_cerrada != 1)
+			redirect('inicio');
+
+		// Resumen guardado al cerrar (el del dia mas reciente)
+		$this->data['caja'] = $this->db->where('id_usuario', $sucursal)
+			->order_by('fecha', 'DESC')->limit(1)
+			->get('cajas_diarias')->row();
+
+		$this->data['seccion'] = "cerrar_caja";
 
 		$this->template->title('Caja Cerrada | PDF Color');
 

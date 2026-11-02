@@ -217,5 +217,7 @@ class Shopping_model extends CI_Model{
 				total_transferencia = total_transferencia + VALUES(total_transferencia)",
 			array($cliente, $fecha_hoy, $total, $efectivo, $tarjeta, $medio, $transferencia)
 		);
+
+		return $idpedido;
 	}
 }

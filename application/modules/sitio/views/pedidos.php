@@ -353,7 +353,7 @@ $fecha_hoy = $dias[date('w')].' '.date('j').' de '.$meses[date('n')];
                                         <span class="pd-item-cantidad"><?php echo pd_numero($item->cantidad) ?> ×</span>
                                         <span>
                                             <span class="pd-item-nombre"><?php echo htmlspecialchars($item->nombre ? $item->nombre : 'Producto #'.$item->id_articu) ?></span>
-                                            <span class="pd-item-codigo"> · <?php echo htmlspecialchars($item->codigo) ?></span>
+                                            <span class="pd-item-codigo"> · <?php echo htmlspecialchars((string)$item->codigo) ?></span>
                                         </span>
                                     </div>
                                 <?php } ?>

@@ -28,7 +28,7 @@ if ( ! empty($user_data[0]->idusuario))
     <head>
         <meta charset="utf-8">
         <title><?php echo $template['title'];?></title>
-        <meta name="description" content="<?php echo $meta['description'];?>" />
+        <meta name="description" content="<?php echo isset($meta['description']) ? htmlspecialchars($meta['description']) : '' ?>" />
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="<?php echo $base_url ?>/css/bootstrap.css" rel="stylesheet" type="text/css" media="all" />
         <link href="<?php echo $base_url ?>/css/themify-icons.css" rel="stylesheet" type="text/css" media="all" />
@@ -344,7 +344,7 @@ function quitarArt(idArticulo, reloadPage, deleteAll)
             $hd_caja_cerrada = isset($hd_datos->caja_cerrada) && $hd_datos->caja_cerrada == 1;
 
             $hd_links = array(
-                array('url' => 'nueva_venta', 'texto' => 'Nueva venta', 'icono' => 'ti-plus',    'activo' => array('nueva_venta')),
+                array('url' => 'nueva_venta', 'texto' => 'Nueva venta', 'icono' => 'ti-plus',    'activo' => array('nueva_venta', 'venta_generada')),
                 array('url' => 'pedidos',     'texto' => 'Ventas',      'icono' => 'ti-receipt', 'activo' => array('pedidos', 'pedido_detalles')),
                 array('url' => 'cerrar_caja', 'texto' => 'Cerrar caja', 'icono' => 'ti-lock',    'activo' => array('cerrar_caja', 'caja_cerrada')),
             );
