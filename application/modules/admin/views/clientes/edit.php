@@ -1,212 +1,44 @@
-<script type="text/javascript">
-$(document).ready(function()
-{
-	$('#form').validate(
-	{
-		rules: {
-			nombre: {
-				minlength: 2,
-				required: true
-			},
-			apellido: {
-				required: true
-			},
-			email: {
-				required: true
-			},
-			direccion: {
-				required: true
-			},
-			localidad: {
-				required: true
-			},
-			telefono: {
-				required: true
-			},
-			usuario: {
-				required: true
-			}
-	    },
-	    focusCleanup: false,
-	    
-	    highlight: function(label) {
-	    	$(label).closest('.control-group').removeClass ('success').addClass('error');
-	    },
-	    success: function(label) {
-	    	label
-	    		.text('OK!').addClass('valid')
-	    		.closest('.control-group').addClass('success');
-		},
-		errorPlacement: function(error, element) {
-			error.appendTo( element.parents ('.controls') );
-		}
-	});
-	<?php $this->load->view('partials/script_edit.php'); ?>
-}); // end document.ready
+<?php // Alta/edicion de sucursal. Datos de Clientes::edit(). ?>
+<?php if ($errores) { ?>
+	<div class="pn-aviso error" role="alert"><i class="ti-alert"></i><span>Revisá los campos marcados.</span></div>
+<?php } ?>
 
-</script>	
+<form method="post" class="pn-form" autocomplete="off">
+	<section class="pn-tarjeta">
+		<div class="pn-tarjeta-cabecera"><h2>Datos de la sucursal</h2></div>
+		<div class="pn-tarjeta-cuerpo pn-campos">
+			<?php echo p_campo('nombre', 'Nombre', $valores, $errores, array('requerido' => TRUE, 'ayuda' => 'Es el nombre que se ve en el panel y en el sitio. Ej.: PDF Color Ayacucho.', 'attrs' => 'maxlength="60"')) ?>
+			<?php echo p_campo('apellido', 'Detalle (opcional)', $valores, $errores, array('attrs' => 'maxlength="60"', 'ayuda' => 'Se agrega al final del nombre.')) ?>
+			<?php echo p_campo('domicilio', 'Dirección', $valores, $errores, array('attrs' => 'maxlength="250"')) ?>
+			<?php echo p_campo('localidad', 'Localidad', $valores, $errores, array('attrs' => 'maxlength="250"')) ?>
+			<?php echo p_campo('telefono', 'Teléfono', $valores, $errores, array('attrs' => 'maxlength="30"')) ?>
+			<?php echo p_campo('email', 'Email', $valores, $errores, array('tipo' => 'email', 'attrs' => 'maxlength="40"')) ?>
+		</div>
+	</section>
 
+	<section class="pn-tarjeta">
+		<div class="pn-tarjeta-cabecera"><h2>Acceso al sistema de ventas</h2></div>
+		<div class="pn-tarjeta-cuerpo pn-campos">
+			<?php echo p_campo('usuario', 'Usuario', $valores, $errores, array('requerido' => TRUE, 'attrs' => 'maxlength="250" autocapitalize="none" spellcheck="false"')) ?>
+			<?php echo p_campo('clave', $id ? 'Contraseña nueva' : 'Contraseña', array(), $errores, array(
+				'tipo' => 'password', 'requerido' => ! $id, 'attrs' => 'autocomplete="new-password" minlength="6"',
+				'ayuda' => $id ? 'Dejala vacía para no cambiarla. Las contraseñas se guardan encriptadas y no se pueden ver.' : 'Mínimo 6 caracteres.',
+			)) ?>
+			<?php echo p_opciones('activo', 'Estado', array(1 => 'Activa', 2 => 'Inactiva'), isset($valores['activo']) ? $valores['activo'] : 1, 'Una sucursal inactiva no puede ingresar, pero sus ventas siguen en los reportes.') ?>
+			<?php echo p_opciones('caja_cerrada', 'Caja de hoy', array(2 => 'Abierta', 1 => 'Cerrada'), isset($valores['caja_cerrada']) ? $valores['caja_cerrada'] : 2, 'Con la caja cerrada la sucursal no puede vender hasta el día siguiente.') ?>
+		</div>
+	</section>
 
-<!-- CKEDITOR-->	
-<script src="<?php echo site_url('assets');?>/ckeditor/ckeditor.js"></script>
-<script src="<?php echo site_url('assets');?>/ckeditor/samples/js/sample.js"></script>
-<link rel="stylesheet" href="<?php echo site_url('assets');?>/ckeditor/samples/css/samples.css">
-<link rel="stylesheet" href="<?php echo site_url('assets');?>/ckeditor/samples/toolbarconfigurator/lib/codemirror/neo.css">
+	<div class="pn-acciones-form">
+		<button type="submit" class="pn-boton principal"><i class="ti-check"></i><?php echo $id ? 'Guardar cambios' : 'Crear sucursal' ?></button>
+		<a class="pn-boton" href="<?php echo site_url('admin/clientes') ?>">Cancelar</a>
+	</div>
+</form>
 
-
-	<form action="<?php echo $action?>" id="form" method="POST" enctype="multipart/form-data" class="form-horizontal" novalidate="novalidate">
-		<input type="hidden" id="id" name="id" value="<?php echo (isset($row->idusuario))?$row->idusuario:"0"; ?>"/>
-		<div id="page-title" class="clearfix">
-			<span style="font-size:24px;font-weight:bold;float:left;margin-top:5px;"><?php echo humanize($dir2);?></span>
-			<div class="item-content" style="float:right;">							
-				<button type="submit" class="btn btn-inverse">Guardar</button>
-				<button class="btn cancel">Cancelar</button>
-			</div>
-		</div> <!-- /.page-title -->
-		<div class="row">
-			<div class="span12">
-				<div id="validation" class="widget highlight widget-form">
-								
-					<div class="widget-content">
-						
-							<fieldset>
-								<?php 
-									
-								echo (isset($message))?$message:'';?>
-
-								<div class="control-group">
-									<label class="control-label" for="localidad">Localidad</label>
-									<div class="controls">
-										<?php $localidad = (isset($row->localidad))?$row->localidad:''; ?>
-										<input type="text" class="input-xxlarge" name="localidad" id="localidad" value="<?php  echo set_value('localidad', $localidad); ?>">
-									</div>
-								</div>
-
-								<div class="control-group">
-									<label class="control-label" for="domicilio">Domicilio</label>
-									<div class="controls">
-										<?php $domicilio = (isset($row->domicilio))?$row->domicilio:''; ?>
-										<input type="text" class="input-xxlarge" name="domicilio" id="domicilio" value="<?php  echo set_value('domicilio', $domicilio); ?>">
-									</div>
-								</div>
-
-								<div class="control-group">
-									<label class="control-label" for="nombre">Nombre de encargado</label>
-									<div class="controls">
-										<?php $nombre = (isset($row->nombre))?$row->nombre:''; ?>
-										<input type="text" class="input-xxlarge" name="nombre" id="nombre" value="<?php  echo set_value('nombre', $nombre); ?>">
-									</div>
-								</div>
-
-								<div class="control-group">
-									<label class="control-label" for="apellido">Apellido de encargado</label>
-									<div class="controls">
-										<?php $apellido = (isset($row->apellido))?$row->apellido:''; ?>
-										<input type="text" class="input-xxlarge" name="apellido" id="apellido" value="<?php  echo set_value('apellido', $apellido); ?>">
-									</div>
-								</div>
-
-								<div class="control-group">
-									<label class="control-label" for="email">Email</label>
-									<div class="controls">
-										<?php $email = (isset($row->email))?$row->email:''; ?>
-										<input type="text" class="input-xxlarge" name="email" id="email" value="<?php  echo set_value('email', $email); ?>">
-									</div>
-								</div>
-
-								
-								<div class="control-group">
-									<label class="control-label" for="nombre">Teléfono</label>
-									<div class="controls">
-										<?php $telefono = (isset($row->telefono))?$row->telefono:''; ?>
-										<input type="text" class="input-xxlarge" name="telefono" id="telefono" value="<?php  echo set_value('telefono', $telefono); ?>">
-									</div>
-								</div>
-
-
-								<div class="control-group">
-									<label class="control-label" for="usuario">Usuario</label>
-									<div class="controls">
-										<?php $usuario = (isset($row->usuario))?$row->usuario:''; ?>
-										<input  type="text" class="input-xxlarge" name="usuario" id="usuario" value="<?php  echo set_value('usuario', $usuario); ?>">
-									</div>
-								</div>
-
-								<div class="control-group">
-									<label class="control-label" for="clave">Contraseña</label>
-									<div class="controls">
-										<input type="password" class="input-xxlarge" name="clave" id="clave" value="" autocomplete="new-password">
-										<?php if (isset($row->idusuario)): ?>
-										<span class="help-block">Dejar vacío para no cambiarla. Las contraseñas se guardan encriptadas y no se pueden ver.</span>
-										<?php endif; ?>
-									</div>
-								</div>
-
-								<div class="control-group">
-						            <label class="control-label">Activo</label>
-						            <div class="controls">
-						              <?php $activo = (isset($row->activo))?$row->activo:1; 
-						            	$si=($activo == 1)?TRUE:FALSE;	
-						            	$no=($activo == 2)?TRUE:FALSE;
-
-						            ?>
-						              <label class="radio">
-						                <input type="radio" name="activo" id="si" value="1" <?php echo set_radio('activo', '1', $si); ?>>
-						                	Si
-						              </label>
-						              <label class="radio">
-						                <input type="radio" name="activo" id="no" value="2" <?php echo set_radio('activo', '2', $no); ?>>
-						                 	No
-						              </label>	
-						            <?php
-
-						            ?>					             
-						            </div>
-						        </div>	
-
-						        <div class="control-group">
-						            <label class="control-label">Caja del dia cerrada</label>
-						            <div class="controls">
-						              <?php $caja_cerrada = (isset($row->caja_cerrada))?$row->caja_cerrada:2; 
-						            	$si=($caja_cerrada == 1)?TRUE:FALSE;	
-						            	$no=($caja_cerrada == 2)?TRUE:FALSE;
-
-						            ?>
-						              <label class="radio">
-						                <input type="radio" name="caja_cerrada" id="si" value="1" <?php echo set_radio('caja_cerrada', '1', $si); ?>>
-						                	Si
-						              </label>
-						              <label class="radio">
-						                <input type="radio" name="caja_cerrada" id="no" value="2" <?php echo set_radio('caja_cerrada', '2', $no); ?>>
-						                 	No
-						              </label>	
-						            <?php
-
-						            ?>					             
-						            </div>
-						        </div>
-
-
-								<div class="form-actions">
-									<button type="submit" class="btn btn-inverse">Guardar</button>
-									<button class="btn cancel" >Cancelar</button>
-								</div>
-							</fieldset>
-						
-					</div> <!-- /widget-content -->
-				</div>
-			</div>
-		</div>	
+<?php if ($id) { ?>
+	<form method="post" action="<?php echo site_url('admin/clientes/eliminar') ?>" class="pn-form" style="margin-top:32px" data-confirmar="¿Eliminar esta sucursal? Solo se puede si no tiene ventas registradas.">
+		<input type="hidden" name="id" value="<?php echo (int) $id ?>">
+		<button type="submit" class="pn-boton peligro"><i class="ti-trash"></i>Eliminar sucursal</button>
+		<span class="suave" style="margin-left:8px;font-size:13px">Si tiene ventas, conviene marcarla como inactiva.</span>
 	</form>
-
-		<?php								
-	if(isset($row->idusuario)): ?>
-		<div id="pedidos"></div>
-		<script type="text/javascript">
-			$(document).ready(function() {
-				$( "#pedidos" ).load( "<?php echo base_url('admin/clientes/sub_index/'.$row->idusuario)?>" );				
-			});
-		</script>
-	<?php
-	endif;
-	?>
+<?php } ?>

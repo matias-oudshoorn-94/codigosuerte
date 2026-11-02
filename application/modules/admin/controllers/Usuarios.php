@@ -1,295 +1,119 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
-	
+
+/**
+ * Usuarios que pueden entrar al panel (tabla users, via Ion Auth).
+ */
 class Usuarios extends MY_Controller
 {
-	private $dir='usuarios';
-	private $dir2='usuarios';
-	var $data;
-	function __construct()
-	{
-		$user_reg = $this->session->userdata('user_reg'); 
-		if ($user_reg['idgroup'] != 1 && $user_reg['idgroup'] != 0) { exit(); }
-		
-		parent::__construct();
-		if($this->session->userdata('ubicacion')!= $this->dir)
-		{		
-			$array_items = array('per_page' => NULL, 'sort_order' => NULL, 'sort_by' => NULL, );
-			$this->session->unset_userdata($array_items);
-			$this->session->set_userdata('ubicacion', $this->dir);
-		}	
-		$this->load->model($this->dir.'_model','modelo',TRUE); 		
-		$this->data['dir'] = $this->dir;		
-		$this->data['dir2'] = $this->dir2;	
-	}
-	
-	// Create
-	function add()
-	{	    
-	
-		$this->load->model('groups_model','',TRUE); 
-		$this->data['groups'] = $this->groups_model->getAll();	
-			
-	    // Validate form
-		$this->form_validation->set_rules('first_name', 'Nombre', 'required|xss_clean');
-		$this->form_validation->set_rules('username', 'Usuario', 'required|xss_clean');	
-		$this->form_validation->set_rules('password', 'Contraseña', 'required|min_length[' . $this->config->item('min_password_length', 'ion_auth') . ']|max_length[' . $this->config->item('max_password_length', 'ion_auth') . ']|matches[password_confirm]');
+	const GRUPO_ADMIN = 1;
 
-		$this->form_validation->set_rules('password_confirm', 'confirme Contraseñaa', 'required');
-		$this->form_validation->set_rules('active', 'Activo');		
-	   	    
-	    if($this->form_validation->run())
-	    {  // Validation passes
-	       
-			$username = strtolower($this->input->post('username'));
-			$email    = $username.'@admin.com';
-			$password = $this->input->post('password');
-			$group = array('1');
-			$additional_data = array(
-				'first_name' => $this->input->post('first_name'),
-				'idgroup' => $this->input->post('idgroup')
-			);
-		}
-		if ($this->form_validation->run() == true && $this->ion_auth->register($username, $password, $email, $additional_data, $group))
-		{ 
-			//check to see if we are creating the user
-			//redirect them back to the admin page
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Usuario Guardado</div>";	
-			$this->session->set_flashdata('template_msg', $this->data['message']);
-			$this->index();
-		}
-		else
+	function index()
+	{
+		$usuarios = $this->ion_auth->users()->result();
+		foreach ($usuarios as $u)
 		{
-			$error = (validation_errors() ? validation_errors() : ($this->ion_auth->errors() ? $this->ion_auth->errors() : $this->session->flashdata('message')));
-			if($error!="")
-			{
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Usuario Guardado: ".$error."</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-			}	
-			$this->data['action'] = site_url('admin/'.$this->dir.'/add');
-			
-			$this->template->title($this->data['nombre'], 'Administración');
-			$this->template->build('admin/'.$this->dir.'/add', $this->data);
-		}	    
-	}
-	
-    // Retrieve
-	function index($sort_by = 'first_name', $sort_order = 'desc', $offset = 0)
-	{		   
-        $this->load->library('pagination');
-        $this->load->library('table'); 
-		
-		$this->data['fields'] = array(
-			'first_name' => 'Nombre',
-			'username' => 'Usuario',
-			'active' => 'Activo'						
+			$u->es_admin = $this->ion_auth->in_group(self::GRUPO_ADMIN, $u->id);
+		}
+		usort($usuarios, function ($a, $b) {
+			return array((int) ! $a->es_admin, (int) ! $a->active, $a->username) <=> array((int) ! $b->es_admin, (int) ! $b->active, $b->username);
+		});
+		$this->data['usuarios'] = $usuarios;
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/usuarios/edit/0'), 'texto' => 'Nuevo usuario', 'icono' => 'ti-plus', 'clase' => 'principal'),
 		);
-		//- limit -
-		if($this->uri->segment(7)) 
-			$this->session->set_userdata('per_page', $this->uri->segment(7));
-		else if($this->input->post('bnombre')) 
-			$this->session->set_userdata('per_page', ""); 
-		//--
-		if($this->session->userdata('per_page'))	
-			$sql['limit'] = $this->session->userdata('per_page');
-		else	
-			$sql['limit'] = 10;
-		//--
-		//-	sort_order -
-		if($this->uri->segment(5))
-		{
-			$this->session->set_userdata('sort_order', $this->uri->segment(5));
-			$sql['sort_order'] = $this->session->userdata('sort_order');
-		}	
-		else 
-		{
-			if($this->session->userdata('sort_order'))	
-				$sql['sort_order'] = $this->session->userdata('sort_order');	
-			else
-			{
-				$this->session->set_userdata('sort_order', $sort_order);
-				$sql['sort_order'] = $this->session->userdata('sort_order');
-			}	
-		}	
-		//--
-		//-	sort_by -	
-		if($this->uri->segment(4))
-		{
-			$this->session->set_userdata('sort_by', $this->uri->segment(4));
-			$sql['sort_by'] = $this->session->userdata('sort_by');
-		}	
-		else 
-		{
-			if($this->session->userdata('sort_by'))	
-				$sql['sort_by'] = $this->session->userdata('sort_by');	
-			else
-			{
-				$this->session->set_userdata('sort_by', $sort_by);
-				$sql['sort_by'] = $this->session->userdata('sort_by');
-			}	
-		}			
-		//--	
-		$sql['offset'] = ($offset>1)?$offset:NULL;
-		$sql['bnombre'] = $this->input->get('bnombre');
-		$sql['id_grupo'] = 1;		
-		
-		$results = $this->modelo->getAll($sql);
-				
-		$this->data['rows'] = $results['rows'];
-		$this->data['num_results'] = $results['num_rows'];
-		
-		$config = array();
-		$config['base_url'] = site_url("admin/".$this->dir."/index/$sort_by/$sort_order");
-		$config['total_rows'] = $this->data['num_results'];
-		$config['per_page'] = $sql['limit'];
-			
-		if($this->session->flashdata('template_msg'))
-			$this->data['message'] =	$this->session->flashdata('template_msg');
-		
-		$this->pagination->initialize($config); 
-		$this->data['pagination'] = $this->pagination->create_links();	
-		$this->data['cur_page'] = $this->pagination->cur_page;
-		$this->data['pagination_tot'] = ceil(($config['total_rows']/$this->pagination->per_page));
-		$this->data['action'] = site_url('admin/'.$this->dir.'/index');
-		$this->data['bnombre'] = $sql['bnombre'];
-
-		$this->template->title($this->data['nombre'], 'Administración');
-		$this->template->build('admin/'.$this->dir.'/list', $this->data);
+		$this->mostrar('admin/usuarios/list', 'Usuarios del panel', 'usuarios');
 	}
-	
 
-	
-	function edit($id)
+	/** Alta (id 0) o edicion. */
+	function edit($id = 0)
 	{
-		
-		$this->load->model('groups_model','',TRUE); 
-		$this->data['groups'] = $this->groups_model->getAll();	
-
-				
-		if($id!=0)
-		{	
-			$sql['id'] = $id;	
-			$results = $this->modelo->getAll($sql);
-			$this->data['row'] = $results['rows'][0];
-			$this->data['num_results'] = $results['num_rows'];
-		}	
-		
-		$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-						
-		$this->template->title($this->data['nombre'].' :: Administración');
-		$this->template->build('admin/'.$this->dir.'/edit', $this->data);
-	}	
-	
-	function update()
-	{ 
-		$this->form_validation->set_rules('first_name', 'Nombre', 'required|xss_clean');
-		$this->form_validation->set_rules('username', 'Usuario', 'required|xss_clean');	
-		$this->form_validation->set_rules('active', 'Activo');		
-		
-		if ($this->form_validation->run() == FALSE)
+		$id = (int) $id;
+		$usuario = $id ? $this->ion_auth->user($id)->row() : NULL;
+		if ($id && ! $usuario)
 		{
-			$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Errores !</h4>".validation_errors()."</div>";								
-			$this->template->title($this->data['nombre'].' :: Administración');
-			$this->template->build('admin/'.$this->dir.'/edit', $this->data);			
+			p_flash('Ese usuario no existe.', 'error');
+			redirect('admin/usuarios');
 		}
-		else
+		$es_yo = $usuario && (int) $usuario->id === (int) $this->data['admin_usuario']->id;
+		$minimo = (int) $this->config->item('min_password_length', 'ion_auth');
+		$errores = array();
+		$valores = $usuario ? (array) $usuario : array('active' => 1);
+		$valores['es_admin'] = $usuario ? (int) $this->ion_auth->in_group(self::GRUPO_ADMIN, $usuario->id) : 1;
+
+		if ($this->input->method() === 'post')
 		{
-			$id = $this->input->post('id');			
-						
-			if($id==0)
-			{	//id, nombre, descripcion, orden, imagen
-				$objeto = array(
-					'idgroup'=> $this->input->post('idgroup'),
-					'first_name'=> $this->input->post('first_name'),					
-					'username'=> $this->input->post('username'),
-					'active'=> $this->input->post('active')					
-				); 
-				$id = $this->modelo->save($objeto);
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Guardado</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				$this->index();
-			} 
-			else
+			$datos = array(
+				'username'   => trim((string) $this->input->post('username')),
+				'email'      => trim((string) $this->input->post('email')),
+				'first_name' => trim((string) $this->input->post('first_name')),
+				'last_name'  => trim((string) $this->input->post('last_name')),
+				'active'     => $es_yo ? 1 : ($this->input->post('active') == 1 ? 1 : 0),
+			);
+			$es_admin = $es_yo ? 1 : ($this->input->post('es_admin') == 1 ? 1 : 0);
+			$clave = (string) $this->input->post('clave');
+
+			if ($datos['username'] === '') $errores['username'] = 'El usuario es obligatorio.';
+			elseif ($this->db->where('username', $datos['username'])->where('id !=', $id)->count_all_results('users') > 0) $errores['username'] = 'Ya existe otro usuario con ese nombre.';
+			if ($datos['email'] === '' || ! filter_var($datos['email'], FILTER_VALIDATE_EMAIL)) $errores['email'] = 'Poné un email válido.';
+			if ( ! $id && $clave === '') $errores['clave'] = 'Elegí una contraseña.';
+			elseif ($clave !== '' && strlen($clave) < $minimo) $errores['clave'] = 'La contraseña tiene que tener al menos '.$minimo.' caracteres.';
+
+			if ( ! $errores)
 			{
-				$objeto = array(
-					'idgroup'=> $this->input->post('idgroup'),	
-					'first_name'=> $this->input->post('first_name'),					
-					'username'=> $this->input->post('username'),
-					'active'=> $this->input->post('active')				
-				);
-				$this->modelo->update($id,$objeto);
-				//echo $this->db->last_query();
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Modificado</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				$this->index();
+				if ($id)
+				{
+					if ($clave !== '') $datos['password'] = $clave; // Ion Auth la encripta
+					$this->ion_auth->update($id, $datos);
+				}
+				else
+				{
+					$id = (int) $this->ion_auth->register($datos['username'], $clave, $datos['email'],
+						array('first_name' => $datos['first_name'], 'last_name' => $datos['last_name']), array(self::GRUPO_ADMIN));
+					if ( ! $id)
+					{
+						p_flash('No se pudo crear el usuario.', 'error');
+						redirect('admin/usuarios');
+					}
+					if ( ! $datos['active']) $this->ion_auth->deactivate($id);
+				}
+
+				$tiene = $this->ion_auth->in_group(self::GRUPO_ADMIN, $id);
+				if ($es_admin && ! $tiene) $this->ion_auth->add_to_group(self::GRUPO_ADMIN, $id);
+				if ( ! $es_admin && $tiene) $this->ion_auth->remove_from_group(self::GRUPO_ADMIN, $id);
+
+				p_flash($usuario ? 'Se guardó el usuario.' : 'Se creó el usuario.');
+				redirect('admin/usuarios');
 			}
-		}	
-	}	
-	
-	// Delete
-	function delete()
-	{
-		$ids = $this->input->post('ele');
-		foreach ($ids as $id) 
-		{		
-			if($this->ion_auth->delete_user($id))
-			{	
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Usuario Eliminado</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);				
-			}	
-			else
-			{
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Error !</h4>Al Eliminar Usuario</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);		
-			}
-		}	
-		$this->index();			
-	}
-	
-	//change password
-	function change_password()
-	{
-		$this->form_validation->set_rules('password', 'New Password', 'required|min_length[' . $this->config->item('min_password_length', 'ion_auth') . ']|max_length[' . $this->config->item('max_password_length', 'ion_auth') . ']|matches[c_password]');
-		$this->form_validation->set_rules('c_password', 'Confirm New Password', 'required');
+			$valores = array_merge($valores, $datos, array('es_admin' => $es_admin));
+		}
 
-		if ($this->form_validation->run() == false)
-		{ 
-			echo "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Error !</h4>".validation_errors()."</div>";
+		$this->data['id'] = $id;
+		$this->data['es_yo'] = $es_yo;
+		$this->data['minimo_clave'] = $minimo;
+		$this->data['valores'] = $valores;
+		$this->data['errores'] = $errores;
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/usuarios'), 'texto' => 'Usuarios', 'icono' => 'ti-arrow-left'),
+		);
+		$this->mostrar('admin/usuarios/edit', $id ? 'Editar usuario' : 'Nuevo usuario', 'usuarios');
+	}
+
+	function eliminar()
+	{
+		$this->solo_post();
+		$id = (int) $this->input->post('id');
+		if ($id === (int) $this->data['admin_usuario']->id)
+		{
+			p_flash('No podés eliminar tu propio usuario.', 'error');
+		}
+		elseif ($this->ion_auth->delete_user($id))
+		{
+			p_flash('Se eliminó el usuario.');
 		}
 		else
 		{
-			$id = $this->input->post('id');		
-			$password = $this->input->post('password');	
-			$salt       = $this->ion_auth->salt();
-			$objeto['password']   = $this->ion_auth->hash_password($password, $salt);
-			$this->modelo->update($id,$objeto);
-			echo "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Contraseña actualizada</div>";
+			p_flash('No se pudo eliminar el usuario.', 'error');
 		}
+		redirect('admin/usuarios');
 	}
-	
-	function _get_csrf_nonce()
-	{
-		$this->load->helper('string');
-		$key   = random_string('alnum', 8);
-		$value = random_string('alnum', 20);
-		$this->session->set_flashdata('csrfkey', $key);
-		$this->session->set_flashdata('csrfvalue', $value);
-
-		return array($key => $value);
-	}
-
-	function _valid_csrf_nonce()
-	{
-		if ($this->input->post($this->session->flashdata('csrfkey')) !== FALSE &&
-			$this->input->post($this->session->flashdata('csrfkey')) == $this->session->flashdata('csrfvalue'))
-		{
-			return TRUE;
-		}
-		else
-		{
-			return FALSE;
-		}
-	}
-	
 }
-

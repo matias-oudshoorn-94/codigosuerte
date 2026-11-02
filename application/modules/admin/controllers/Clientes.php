@@ -1,317 +1,175 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
-	
-class Clientes extends MY_Controller 
+
+/**
+ * Sucursales (URL historica: /admin/clientes) y sus impresoras.
+ */
+class Clientes extends MY_Controller
 {
-	private $dir = 'clientes';
-	private $nom = 'Sucursales';
-	private $dir2 = 'Sucursales';
-	
 	function __construct()
 	{
 		parent::__construct();
-		if($this->session->userdata('ubicacion')!= $this->dir)
-		{		
-			$array_items = array('per_page' => NULL, 'sort_order' => NULL, 'sort_by' => NULL, );
-			$this->session->unset_userdata($array_items);
-			$this->session->set_userdata('ubicacion', $this->dir);
-		}			
-		$this->load->model($this->dir.'_model','modelo',TRUE); 
-		$this->data['dir'] = $this->dir;
-		$this->data['dir2'] = $this->dir2;
+		$this->load->model('Sucursales_model', 'sucursales_m');
+		$this->load->model('admin/clientes_model');
 	}
-	
-	function index($sort_by = 'nombre', $sort_order = 'asc', $offset = 0)
+
+	function index()
 	{
-
-		$this->load->helper('text');
-        $this->load->library('pagination');
-        $this->load->library('table'); 
-		
-		$this->data['fields'] = array(
-			'localidad' => 'Localidad',
-			'domicilio' => 'Dirección',
-			'nombre' => 'Encargado',
-			'telefono' => 'Teléfono',
-			'email' => 'Email',
-			'activo' => 'Estado',	
-			'caja_cerrada' => 'Caja diaria'	
+		$this->data['lista'] = $this->sucursales_m->listar();
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/clientes/edit/0'), 'texto' => 'Nueva sucursal', 'icono' => 'ti-plus', 'clase' => 'principal'),
 		);
-		//- search -
-		if($this->get_search($this->dir) != '') $sql['search'] = $this->get_search($this->dir);
-		//--
-		//- limit -		
-		$sql['limit'] = $this->get_limit($this->dir);
-		//--
-		//-	sort_order -
-		$sql['sort_order'] = $this->get_sort_order($this->dir, $sort_order);
-		//--
-		//-	sort_by -	
-		$sql['sort_by'] = $this->get_sort_by($this->dir, $sort_by);			
-		//--	
-		$sql['offset'] = ($offset>1)?$offset:NULL;
-		//var_dump($sql);
-		$results = $this->modelo->getAll($sql);
-				
-		$this->data['rows'] = $results['rows'];
-		$this->data['num_results'] = $results['num_rows'];
-		
-		$config = array();
-		$config['base_url'] = site_url("admin/".$this->dir."/index/$sort_by/$sort_order");
-		$config['uri_segment'] = 5;
-		$config['total_rows'] = $this->data['num_results'];
-		$config['per_page'] = $sql['limit'];
-
-		if($this->session->flashdata('template_msg'))
-			$this->data['message'] =	$this->session->flashdata('template_msg');
-		
-		$this->pagination->initialize($config); 
-		
-		$this->data['pagination'] = $this->pagination->create_links();	
-		$this->data['cur_page'] = $this->pagination->cur_page;
-		$this->data['pagination_tot'] = ceil(($config['total_rows']/$this->pagination->per_page));
-		$this->data['action'] = site_url('admin/'.$this->dir.'/index');
-		$this->data['search'] = $this->session->userdata($this->dir.'_search');
-		//print_r($this->session);
-		$this->template->title($this->data['nombre'], 'Administración');
-		$this->template->build('admin/'.$this->dir.'/list', $this->data);
+		$this->mostrar('admin/clientes/list', 'Sucursales', 'sucursales');
 	}
 
-
-	function sluggable($str) {
-
-		$before = array(
-			'àáâãäåòóôõöøèéêëðçìíîïùúûüñšž',
-			'/[^a-z0-9\s]/',
-			array('/\s/', '/--+/', '/---+/')
-		);
-	 
-		$after = array(
-			'aaaaaaooooooeeeeeciiiiuuuunsz',
-			'',
-			'-'
-		);
-	
-		$str = strtolower($str);
-		$str = strtr($str, $before[0], $after[0]);
-		$str = preg_replace($before[1], $after[1], $str);
-		$str = trim($str);
-		$str = preg_replace($before[2], $after[2], $str);
-	 
-		return $str;
-	}
-	
-	function edit($id)
+	/** Alta (id 0) o edicion de una sucursal. */
+	function edit($id = 0)
 	{
-		if($id!=0)
-		{	
-			$sql['id'] = $id;	
-			$results = $this->modelo->getAll($sql);
-			$this->data['row'] = $results['rows'][0];
-			$this->data['num_results'] = $results['num_rows'];
-		}	
-		
-		$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-						
-		$this->template->title($this->data['nombre'].' :: Administración');
-		$this->template->build('admin/'.$this->dir.'/edit', $this->data);
-	}
-		
-	function update()
-	{
-		$this->form_validation->set_rules('nombre', 'Nombre', 'required');
-		if ((int) $this->input->post('id') === 0)
+		$id = (int) $id;
+		$sucursal = $id ? $this->sucursales_m->obtener($id) : NULL;
+		if ($id && ! $sucursal)
 		{
-			$this->form_validation->set_rules('clave', 'Contraseña', 'required');
+			p_flash('Esa sucursal no existe.', 'error');
+			redirect('admin/clientes');
 		}
-		
-		if ($this->form_validation->run() == FALSE)
-		{
-			$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Errores !</h4>".validation_errors()."</div>";								
-			$this->template->title($this->data['nombre'].' :: Administración');
-			$this->template->build('admin/'.$this->dir.'/edit', $this->data);			
-		}
-		else
-		{
-			$id = $this->input->post('id');
-			/*----*/
-			$config['upload_path'] = 'assets/archivos/'.$this->dir.'/original/';
-			$config['allowed_types'] = 'gif|jpg|jpeg|png';
-			$config['max_size']	= '2000';
-			$config['carpeta'] = array();
-			
-			$archivo='';
-			$error = NULL;
-			
-			if (isset($_FILES['userfile']) && $_FILES['userfile']['name']!='') 
-			{
-				$this->load->model('imagenes_model','',TRUE); 	
-				$archivo = $this->imagenes_model->do_upload($config);
-			}
-			if($archivo==FALSE) $this->index();
-			/*----*/
-			
-			$objeto = array(
-				'domicilio' => $this->input->post('domicilio'),
-				'localidad' => $this->input->post('localidad'),
-				'nombre' => $this->input->post('nombre'),
-				'apellido' => $this->input->post('apellido'),
-				'usuario' => $this->input->post('usuario'),
-				'telefono' => $this->input->post('telefono'),
-				'email' => $this->input->post('email'),
-				'activo'=> $this->input->post('activo'),
-				'caja_cerrada'=> $this->input->post('caja_cerrada'),
 
-			);
+		$errores = array();
+		$valores = $sucursal ? (array) $sucursal : array('activo' => 1, 'caja_cerrada' => 2);
 
-			// La clave solo se cambia si se escribio una nueva; se guarda encriptada
+		if ($this->input->method() === 'post')
+		{
+			$campos = array('nombre', 'apellido', 'usuario', 'telefono', 'email', 'domicilio', 'localidad');
+			$datos = array();
+			foreach ($campos as $campo) $datos[$campo] = trim((string) $this->input->post($campo));
+			$datos['activo'] = $this->input->post('activo') == 1 ? 1 : 2;
+			$datos['caja_cerrada'] = $this->input->post('caja_cerrada') == 1 ? 1 : 2;
 			$clave = (string) $this->input->post('clave');
-			if ($clave !== '')
+
+			if ($datos['nombre'] === '') $errores['nombre'] = 'Poné un nombre para la sucursal.';
+			if ($datos['usuario'] === '') $errores['usuario'] = 'El usuario es obligatorio: es con el que se ingresa.';
+			elseif ($this->sucursales_m->usuario_en_uso($datos['usuario'], $id)) $errores['usuario'] = 'Ya hay otra sucursal con ese usuario.';
+			if ($datos['email'] !== '' && ! filter_var($datos['email'], FILTER_VALIDATE_EMAIL)) $errores['email'] = 'El email no es válido.';
+			if ( ! $id && $clave === '') $errores['clave'] = 'Elegí una contraseña para la sucursal.';
+			elseif ($clave !== '' && strlen($clave) < 6) $errores['clave'] = 'La contraseña tiene que tener al menos 6 caracteres.';
+
+			if ( ! $errores)
 			{
-				$objeto['clave'] = Clientes_model::encriptar_clave($clave);
+				if ($clave !== '') $datos['clave'] = Clientes_model::encriptar_clave($clave);
+				$this->sucursales_m->guardar($id, $datos);
+				p_flash($id ? 'Se guardaron los cambios de la sucursal.' : 'Se creó la sucursal.');
+				redirect('admin/clientes');
 			}
-						
-			if($id==0)
-			{
-				if($archivo!='') $objeto['logo'] = $archivo;	
-				$id = $this->modelo->save($objeto);
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Guardado</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
-			} 
-			else
-			{
-				if($archivo!='') $objeto['logo'] = $archivo;	
-				$this->modelo->update($id,$objeto);
-				//echo $this->db->last_query();
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Modificado</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
-			}
-		}	
-	}
-
-	
-	
-	function delete()
-	{
-		$this->modelo->delete($this->input->post('ele'));
-		$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Eliminado</div>";
-		$this->session->set_flashdata('template_msg', $this->data['message']);
-		redirect('admin/'.$this->dir.'/index', 'refresh');
-	}
-	
-	function eliminar_img($id)
-	{
-		$this->modelo->delete_img($id);
-		$this->edit($id);
-	}
-
-	function sub_index($id)
-	{
-
-		$this->data['fields'] = array(
-			'fecha' => 'Fecha',
-			'codigo' => 'Código',
-			'copias' => 'Cantidad de copias',
-		);
-		$this->data['sub_id'] = $id;
-		$results = $this->modelo->getAllList($this->data);
-		$this->data['rows'] = $results['rows'];
-		
-		$this->load->view('admin/'.$this->dir.'/sub_list', $this->data);
-	}
-
-
-	function sub_edit($id)
-	{
-		
-		$this->data['sub_id'] = $this->input->post('sub_id');
-
-		if($id!=0)
-		{	
-			$sql['id'] = $id;				 			
-			$results = $this->modelo->getImg($sql);
-			$this->data['row'] = $results['rows'][0];
-		}	
-				
-		$this->load->view('admin/'.$this->dir.'/sub_edit', $this->data);
-	}
-
-
-
-	function sub_update()
-	{
-		$id = $this->input->post('id');
-
-		$fecha = explode("/", trim($this->input->post('fecha')));
-		
-			list($day, $month, $year) = $fecha;
-
-			$unix_timestamp = mktime(0,0,0,$month,$day,$year);
-
-			$fecha= date('Y-m-d', $unix_timestamp);
-					
-		
-		if($id==0)
-		{	
-			$objeto = array(
-				'codigo'=> $this->input->post('codigo'),
-				'fecha'=> $fecha,
-				'copias'=> $this->input->post('copias'),
-				'sub_id' => $this->input->post('sub_id')
-			);
-
-
-			$id = $this->modelo->saveImg($objeto);	
-			//echo $this->db->last_query();	
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Guardado</div>";	
-		} 
-		else
-		{
-			$objeto = array(
-				'codigo'=> $this->input->post('codigo'),
-				'fecha'=> $fecha,
-				'copias'=> $this->input->post('copias'),
-				'id'=> $this->input->post('id'),
-				'sub_id' => $this->input->post('sub_id')
-			);		
-
-
-			$this->modelo->sub_update($objeto);
-			//echo $this->db->last_query();
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Modificado</div>";				
+			$valores = array_merge($valores, $datos);
 		}
-		$this->session->set_flashdata('template_msg', $this->data['message']);
-		$this->sub_index($this->input->post('sub_id'));		
-	}
 
-	function sub_delete()
-	{	
-		$this->modelo->deleteImg($this->input->post('sub_ele'), $this->input->post('sub_id'));
-		//echo $this->db->last_query();
-		$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Eliminado</div>";	
-		$this->session->set_flashdata('template_msg', $this->data['message']);				
-		$this->sub_index($this->input->post('sub_id'));
+		$this->data['id'] = $id;
+		$this->data['valores'] = $valores;
+		$this->data['errores'] = $errores;
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/clientes'), 'texto' => 'Sucursales', 'icono' => 'ti-arrow-left'),
+		);
+		$this->mostrar('admin/clientes/edit', $id ? 'Editar sucursal' : 'Nueva sucursal', 'sucursales');
 	}
 
 	/**
-	 * Historial de contadores de una impresora (AJAX desde la ficha de la impresora).
-	 * Reemplaza a include/historial_impresora.php.
+	 * Elimina una sucursal solo si no tiene ventas; si tiene, hay que desactivarla
+	 * para no perder el historial de los reportes.
 	 */
-	function historial_impresora()
+	function eliminar()
 	{
-		$filas = $this->db->select('fecha, impresiones')
-			->where('id_impresora', (string) $this->input->post('impresora'))
-			->order_by('fecha', 'ASC')
-			->get('detalles_impresoras')
-			->result();
-
-		echo '<table class="table table-striped"><thead><tr><th scope="col">Fecha</th><th scope="col">Impresiones agregadas</th></tr></thead><tbody>';
-		foreach ($filas as $fila)
+		$this->solo_post();
+		$id = (int) $this->input->post('id');
+		if ($this->sucursales_m->cantidad_ventas($id) > 0)
 		{
-			echo '<tr><td>'.html_escape($fila->fecha).'</td><td>'.(int) $fila->impresiones.'</td></tr>';
+			p_flash('Esa sucursal tiene ventas registradas: desactivala en lugar de eliminarla, así no se pierden los reportes.', 'error');
 		}
-		echo '</tbody></table>';
+		else
+		{
+			$this->sucursales_m->eliminar($id);
+			p_flash('Se eliminó la sucursal.');
+		}
+		redirect('admin/clientes');
+	}
+
+	// ---------- Impresoras ----------
+
+	/** Impresoras de una sucursal (URL historica: sub_index). */
+	function sub_index($sucursal = 0)
+	{
+		$s = $this->sucursales_m->obtener($sucursal);
+		if ( ! $s)
+		{
+			p_flash('Esa sucursal no existe.', 'error');
+			redirect('admin/clientes');
+		}
+		$this->data['sucursal'] = $s;
+		$this->data['impresoras'] = $this->sucursales_m->impresoras($s->idusuario);
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/clientes'), 'texto' => 'Sucursales', 'icono' => 'ti-arrow-left'),
+			array('url' => site_url('admin/clientes/sub_edit/0?sucursal='.(int) $s->idusuario), 'texto' => 'Nueva impresora', 'icono' => 'ti-plus', 'clase' => 'principal'),
+		);
+		$this->mostrar('admin/clientes/sub_list', 'Impresoras de '.p_nombre_sucursal($s), 'sucursales');
+	}
+
+	/** Alta (id 0, con ?sucursal=) o edicion de una impresora, con su historial. */
+	function sub_edit($id = 0)
+	{
+		$id = (int) $id;
+		$impresora = $id ? $this->sucursales_m->impresora($id) : NULL;
+		$sucursal_id = $impresora ? (int) $impresora->sub_id : (int) $this->input->get_post('sucursal');
+		$s = $this->sucursales_m->obtener($sucursal_id);
+		if (($id && ! $impresora) || ! $s)
+		{
+			p_flash('No se encontró la impresora o la sucursal.', 'error');
+			redirect('admin/clientes');
+		}
+
+		$errores = array();
+		$valores = $impresora ? (array) $impresora : array('codigo' => '', 'copias' => 0, 'fecha' => date('Y-m-d'));
+
+		if ($this->input->method() === 'post')
+		{
+			$datos = array(
+				'codigo' => trim((string) $this->input->post('codigo')),
+				'copias' => $this->input->post('copias'),
+				'fecha'  => p_fecha_valida($this->input->post('fecha'), date('Y-m-d')),
+				'sub_id' => (int) $s->idusuario,
+			);
+			if ($datos['codigo'] === '') $errores['codigo'] = 'El código es obligatorio (es el que se elige al cerrar caja).';
+			elseif ($this->sucursales_m->codigo_impresora_en_uso($datos['codigo'], $id)) $errores['codigo'] = 'Ya hay otra impresora con ese código.';
+			if ( ! is_numeric($datos['copias']) || $datos['copias'] < 0) $errores['copias'] = 'El contador tiene que ser un número mayor o igual a 0.';
+
+			if ( ! $errores)
+			{
+				$datos['copias'] = (int) $datos['copias'];
+				$this->sucursales_m->guardar_impresora($id, $datos);
+				p_flash($id ? 'Se guardó la impresora.' : 'Se agregó la impresora.');
+				redirect('admin/clientes/sub_index/'.(int) $s->idusuario);
+			}
+			$valores = array_merge($valores, $datos);
+		}
+
+		$this->data['id'] = $id;
+		$this->data['sucursal'] = $s;
+		$this->data['valores'] = $valores;
+		$this->data['errores'] = $errores;
+		$this->data['historial'] = $impresora ? $this->sucursales_m->historial_impresora($impresora->codigo) : array();
+		$this->data['graficos'] = ! empty($this->data['historial']);
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/clientes/sub_index/'.(int) $s->idusuario), 'texto' => 'Impresoras', 'icono' => 'ti-arrow-left'),
+		);
+		$this->mostrar('admin/clientes/sub_edit', $id ? 'Impresora '.$valores['codigo'] : 'Nueva impresora', 'sucursales');
+	}
+
+	function sub_eliminar()
+	{
+		$this->solo_post();
+		$impresora = $this->sucursales_m->impresora($this->input->post('id'));
+		if ($impresora)
+		{
+			$this->sucursales_m->eliminar_impresora($impresora->id);
+			p_flash('Se eliminó la impresora '.$impresora->codigo.'.');
+			redirect('admin/clientes/sub_index/'.(int) $impresora->sub_id);
+		}
+		redirect('admin/clientes');
 	}
 }

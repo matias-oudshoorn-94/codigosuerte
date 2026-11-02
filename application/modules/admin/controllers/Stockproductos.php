@@ -1,161 +1,92 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
+/**
+ * Stock: todos los productos con su stock en cada sucursal activa, editable en la tabla.
+ */
 class Stockproductos extends MY_Controller
 {
-	private $dir = 'stockproductos';
-	private $nom = 'Stock Productos';
-	private $dir2 = 'Stock Productos';
+	const POR_PAGINA = 50;
 
-	function __construct()
+	function index()
 	{
-		parent::__construct();
-		if($this->session->userdata('ubicacion')!= $this->dir)
+		$sucursales = array_filter($this->sucursales(), function ($s) { return $s->activo == 1; });
+		$q = trim((string) $this->input->get('q'));
+		$filtro = in_array($this->input->get('filtro'), array('sin', 'bajo'), TRUE) ? $this->input->get('filtro') : '';
+		$umbral = max(1, (int) ($this->input->get('umbral') ?: 5));
+
+		$ids = array_keys($sucursales);
+		$this->filtrar($q, $filtro, $umbral, $ids);
+		$pag = $this->paginacion($this->db->count_all_results('productos p'), self::POR_PAGINA);
+
+		$this->filtrar($q, $filtro, $umbral, $ids);
+		$productos = $this->db->select('p.id, p.nombre, p.codigo, p.precio_final')
+			->order_by('p.nombre', 'ASC')->limit($pag['por_pagina'], $pag['offset'])
+			->get('productos p')->result();
+
+		// Stock de los productos de esta pagina: [producto][sucursal] => cantidad
+		$stock = array();
+		if ($productos && $ids)
 		{
-			$array_items = array('per_page' => NULL, 'sort_order' => NULL, 'sort_by' => NULL, );
-			$this->session->unset_userdata($array_items);
-			$this->session->set_userdata('ubicacion', $this->dir);
-		}
-		$this->load->model($this->dir.'_model','modelo',TRUE);
-		$this->data['dir'] = $this->dir;
-		$this->data['dir2'] = $this->dir2;
-	}
-
-	function index($sort_by = 'nombre', $sort_order = 'asc', $offset = 0)
-	{
-		$this->load->helper('text');
-        $this->load->library('pagination');
-        $this->load->library('table');
-
-		$this->data['fields'] = array(
-			'producto_id' => 'Producto',
-			'idusuario' => 'Sucursal',
-			'stock' => 'Stock',
-		);
-		//- search -
-		if($this->get_search($this->dir) != '') $sql['search'] = $this->get_search($this->dir);
-		//--
-		//- limit -
-		$sql['limit'] = $this->get_limit($this->dir);
-		//--
-		//-	sort_order -
-		$sql['sort_order'] = $this->get_sort_order($this->dir, $sort_order);
-		//--
-		//-	sort_by -
-		$sql['sort_by'] = $this->get_sort_by($this->dir, $sort_by);
-		//--
-		$sql['offset'] = ($offset>1)?$offset:NULL;
-		//var_dump($sql);
-		$results = $this->modelo->getAll($sql);
-
-		$this->data['rows'] = $results['rows'];
-		$this->data['num_results'] = $results['num_rows'];
-
-		$config = array();
-		$config['base_url'] = site_url("admin/".$this->dir."/index/$sort_by/$sort_order");
-		$config['total_rows'] = $this->data['num_results'];
-		$config['per_page'] = $sql['limit'];
-
-		if($this->session->flashdata('template_msg'))
-			$this->data['message'] =	$this->session->flashdata('template_msg');
-
-		$this->pagination->initialize($config);
-		$this->data['pagination'] = $this->pagination->create_links();
-		$this->data['cur_page'] = $this->pagination->cur_page;
-		$this->data['pagination_tot'] = ceil(($config['total_rows']/$this->pagination->per_page));
-		$this->data['action'] = site_url('admin/'.$this->dir.'/index');
-		$this->data['search'] = $this->session->userdata($this->dir.'_search');
-		$this->data['bnombre'] = $sql['bnombre'];
-
-		$this->template->title($this->data['nombre'], 'Administración');
-		$this->template->build('admin/'.$this->dir.'/list', $this->data);
-	}
-
-	function edit($id)
-	{
-		if($id!=0)
-		{
-			$sql['id'] = $id;
-			$results = $this->modelo->getAll($sql);
-			$this->data['row'] = $results['rows'][0];
-			$this->data['num_results'] = $results['num_rows'];
+			$filas = $this->db->where_in('producto_id', array_map(function ($p) { return (int) $p->id; }, $productos))
+				->where_in('idusuario', $ids)->get('stock_sucursal')->result();
+			foreach ($filas as $f) $stock[(int) $f->producto_id][(int) $f->idusuario] = (int) $f->stock;
 		}
 
-		$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-
-		$this->template->title($this->data['nombre'].' :: Administración');
-		$this->template->build('admin/'.$this->dir.'/edit', $this->data);
+		$this->data['sucursales'] = $sucursales;
+		$this->data['productos'] = $productos;
+		$this->data['stock'] = $stock;
+		$this->data['pag'] = $pag;
+		$this->data['q'] = $q;
+		$this->data['filtro'] = $filtro;
+		$this->data['umbral'] = $umbral;
+		$this->mostrar('admin/stockproductos/list', 'Stock', 'stock');
 	}
 
-	function update()
+	/**
+	 * Filtros: busqueda por nombre/codigo y "sin stock" / "stock bajo" en alguna sucursal activa.
+	 * (Un producto sin fila en stock_sucursal cuenta como stock 0.)
+	 */
+	private function filtrar($q, $filtro, $umbral, $ids)
 	{
-		$this->form_validation->set_rules('stock', 'Stock', 'required');
-
-		if ($this->form_validation->run() == FALSE)
+		if ($q !== '') $this->db->group_start()->like('p.nombre', $q)->or_like('p.codigo', $q)->group_end();
+		if ($filtro && $ids)
 		{
-			$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Errores !</h4>".validation_errors()."</div>";
-			$this->template->title($this->data['nombre'].' :: Administración');
-			$this->template->build('admin/'.$this->dir.'/edit', $this->data);
-		}
-		else
-		{
-			$id = $this->input->post('id');
-			/*----*/
-			$config['upload_path'] = 'assets/archivos/'.$this->dir.'/original/';
-			$config['allowed_types'] = 'gif|jpg|jpeg|png';
-			$config['max_size']	= '2000';
-			$config['carpeta'] = array();
-
-			$archivo='';
-			$error = NULL;
-
-			if (isset($_FILES['userfile']) && $_FILES['userfile']['name']!='')
+			$limite = $filtro === 'sin' ? 0 : (int) $umbral;
+			$condiciones = array();
+			foreach ($ids as $id)
 			{
-				$this->load->model('imagenes_model','',TRUE);
-				$archivo = $this->imagenes_model->do_upload($config);
+				$condiciones[] = 'COALESCE((SELECT s.stock FROM stock_sucursal s WHERE s.producto_id = p.id AND s.idusuario = '.(int) $id.' LIMIT 1), 0) <= '.$limite;
 			}
-			if($archivo==FALSE) $this->index();
-			/*----*/
-
-
-			$objeto = array(
-				'producto_id'=> $this->input->post('producto_id'),
-				'idusuario'=> $this->input->post('idusuario'),
-				'stock'=> $this->input->post('stock')
-			);
-
-			if($id==0)
-			{
-				if($archivo!='') $objeto['logo'] = $archivo;
-				$id = $this->modelo->save($objeto);
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Guardado</div>";
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
-			}
-			else
-			{
-				if($archivo!='') $objeto['logo'] = $archivo;
-				$this->modelo->update($id,$objeto);
-				//echo $this->db->last_query();
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Modificado</div>";
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
-			}
+			$this->db->where('('.implode(' OR ', $condiciones).')', NULL, FALSE);
 		}
 	}
 
-	function delete()
+	/** Guarda el stock de la pagina: stock[producto][sucursal] = cantidad. */
+	function guardar()
 	{
-		$this->modelo->delete($this->input->post('ele'));
-		$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Eliminado</div>";
-		$this->session->set_flashdata('template_msg', $this->data['message']);
-		redirect('admin/'.$this->dir.'/index', 'refresh');
-	}
+		$this->solo_post();
+		$this->load->model('admin/stockproductos_model', 'stock_m');
+		$sucursales = $this->sucursales();
+		$cambios = 0;
 
-	function eliminar_img($id)
-	{
-		$this->modelo->delete_img($id);
-		$this->edit($id);
+		$this->db->trans_start();
+		foreach ((array) $this->input->post('stock') as $producto => $por_sucursal)
+		{
+			foreach ((array) $por_sucursal as $sucursal => $cantidad)
+			{
+				if ( ! isset($sucursales[(int) $sucursal]) || $cantidad === '') continue;
+				$original = $this->input->post('original')[$producto][$sucursal] ?? NULL;
+				if ((string) $original === (string) (int) $cantidad) continue; // sin cambios
+				$this->stock_m->save_or_update((int) $producto, (int) $sucursal, max(0, (int) $cantidad));
+				$cambios++;
+			}
+			// Mantener el stock total del producto como suma de las sucursales
+			$this->db->query('UPDATE productos SET stock = (SELECT COALESCE(SUM(stock), 0) FROM stock_sucursal WHERE producto_id = ?) WHERE id = ?', array((int) $producto, (int) $producto));
+		}
+		$this->db->trans_complete();
+
+		p_flash($cambios ? 'Se actualizó el stock ('.$cambios.' cambio'.($cambios == 1 ? '' : 's').').' : 'No había cambios para guardar.');
+		$volver = (string) $this->input->post('volver');
+		redirect('admin/stockproductos'.(preg_match('/^\?[A-Za-z0-9_=&%+.-]*$/', $volver) ? $volver : ''));
 	}
 }
-

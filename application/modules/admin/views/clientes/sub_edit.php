@@ -1,164 +1,61 @@
+<?php
+// Alta/edicion de impresora con su historial. Datos de Clientes::sub_edit().
+$ultimos = array_reverse(array_slice($historial, 0, 60));
+$total_historial = 0;
+foreach ($historial as $h) $total_historial += $h->impresiones;
+?>
+<?php if ($errores) { ?>
+	<div class="pn-aviso error" role="alert"><i class="ti-alert"></i><span>Revisá los campos marcados.</span></div>
+<?php } ?>
 
-<script type="text/javascript">
-$(document).ready(function()
-{		
-	$('#sub_form').validate(
-	{
-		rules: {
-			copias: {
-				required: true
-			},	
-			codigo: {
-				required: true
-			},
-			fecha: {
-                        required: true
-                    }
-	    },	     
-	    focusCleanup: false,
-	    
-	    highlight: function(label) {
-	    	$(label).closest('.control-group').removeClass ('success').addClass('error');
-	    },
-	    success: function(label) {
-	    	label
-	    		.text('OK!').addClass('valid')
-	    		.closest('.control-group').addClass('success');
-		},
-		errorPlacement: function(error, element) {
-			error.appendTo( element.parents ('.controls') );
-		}
-	});
-	$('.cancel').click(function()
-	{
-		$( "#pedidos" ).load( "<?php echo base_url('admin/'.$dir.'/sub_index/'.$sub_id)?>" );						
-	});	
-	$('#eliminar').click(function()
-	{
-		if (!confirm('Eliminar imagen?')) {
-            return false
-        }
-	});
-	$('.form').eq (0).find ('input').eq (0).focus ();
-	$("form#sub_form").submit(function(event)
-	{
-		if($(this).valid())
-		{	
-	  		event.preventDefault();
-	 		//grab all form data  
-	  		var formData = new FormData($(this)[0]);
-	 		
-	  		$.ajax({
-	    		url: "<?php echo base_url('admin/'.$dir.'/sub_update')?>",
-			    type: 'POST',
-			    data: formData,
-			    async: false,
-			    cache: false,
-			    contentType: false,
-			    processData: false,
-			    success: function (returndata) {
-			     $( "#pedidos" ).html(returndata);
-			    }
-			});
-			 
-		  	return false;
-		 } 	
-	});
-
-	$('.form').eq(0).find('input').eq(0).focus();
-        $('#fecha').datepicker();
-
-	
-}); // end document.ready
-
-
-function historial_impresora($codigo_impresora)
-{
-	 var impresora = $codigo_impresora;
-
-          $.ajax({
-              type: "POST",
-              url: '<?php echo site_url('admin/clientes/historial_impresora') ?>', 
-              data: {impresora: impresora},
-              success: function (data) {
-              $("#resultado_historial").html(data);
-
-              }
-          });
-}
-
-
-</script>	
-	<form action="" id="sub_form" method="POST" enctype="multipart/form-data" class="form-horizontal" novalidate="novalidate">
-		<input type="hidden" id="id" name="id" value="<?php echo (isset($row->id))?$row->id:"0"; ?>"/>
-		<input type="hidden" id="sub_id" name="sub_id" value="<?php echo $sub_id?>"/>
-
-		<div id="page-title" class="clearfix">
-			<span style="font-size:24px;font-weight:bold;float:left;margin-top:5px;">Impresoras</span>
-			<div class="item-content" style="float:right;">							
-				<button type="submit" class="btn btn-inverse">Guardar</button>
-				<button class="btn cancel">Cancelar</button>
-			</div>
-		</div> <!-- /.page-title -->
-		<div class="row">
-			<div class="span12">
-				<div id="validation" class="widget highlight widget-form">
-								
-					<div class="widget-content">
-						
-							<fieldset>
-
-								<?php
-                                $fecha_vacia = date("01/01/2021");
-                                ?>
-
-		                        <div class="control-group">
-		                            <label class="control-label" for="fecha">Fecha <font style="color: red;">*</font></label>
-		                            <div class="controls">
-		                                <?php $fecha = (isset($row->fecha)) ? $row->fecha : $fecha_vacia; ?>
-		                                <input type="text" class="input-xxlarge" name="fecha" id="fecha"
-		                                       value="<?php echo set_value('fecha', date("d/m/Y", strtotime($fecha))); ?>">
-		                            </div>
-		                        </div>   
-										
-								
-
-				                              
-
-
-								<div class="control-group">
-		                            <label class="control-label" for="codigo">Código</label>
-		                            <?php $codigo = (isset($row->codigo)) ? $row->codigo : ''; ?>
-		                            <div class="controls">
-		                            	<input type="text" class="input-xxlarge" name="codigo" id="codigo" value="<?php  echo set_value('codigo', $codigo); ?>">
-		                            </div>
-		                        </div>
-
-
-								<div class="control-group">
-									<label class="control-label" for="copias">Cantidad de copias</label>
-									<div class="controls">
-										<?php $copias = (isset($row->copias))?$row->copias:''; ?>
-										<input type="text" class="input-xxlarge" name="copias" id="copias" value="<?php  echo set_value('copias', $copias); ?>">
-									</div>
-								</div>
-
-								<div class="control-group">
-									<label class="btn btn-inverse" for="historial" id="historial" onclick="javascript: historial_impresora('<?php echo $row->codigo?>')">Historial de impresiones</label>
-									<div id="resultado_historial">						
-									</div>
-
-								</div>
-
-								
-								<div class="form-actions">
-									<button type="submit" id="sub_guardar" class="btn btn-inverse">Guardar</button>
-									<button class="btn cancel" >Cancelar</button>
-								</div>
-							</fieldset>
-						
-					</div> <!-- /widget-content -->
-				</div>
-			</div>
-		</div>	
+<div class="pn-grilla">
+	<form method="post" class="pn-tarjeta c-5">
+		<div class="pn-tarjeta-cabecera"><h2>Datos de la impresora</h2><span class="pn-extra"><?php echo p_e(p_nombre_sucursal($sucursal)) ?></span></div>
+		<input type="hidden" name="sucursal" value="<?php echo (int) $sucursal->idusuario ?>">
+		<div class="pn-tarjeta-cuerpo pn-campos" style="grid-template-columns:1fr">
+			<?php echo p_campo('codigo', 'Código', $valores, $errores, array('requerido' => TRUE, 'attrs' => 'maxlength="200"', 'ayuda' => 'Es el que la sucursal ve al declarar la impresora.')) ?>
+			<?php echo p_campo('copias', 'Contador actual', $valores, $errores, array('tipo' => 'number', 'attrs' => 'min="0" step="1"', 'ayuda' => $id ? 'Se actualiza solo con cada cierre de caja. Cambialo solo si se reemplazó o reinició la impresora.' : 'El número que marca hoy el contador de la impresora.')) ?>
+			<?php echo p_campo('fecha', 'Fecha de alta', $valores, $errores, array('tipo' => 'date')) ?>
+		</div>
+		<div class="pn-tarjeta-pie">
+			<button type="submit" class="pn-boton principal"><i class="ti-check"></i><?php echo $id ? 'Guardar' : 'Agregar impresora' ?></button>
+			<a class="pn-boton" href="<?php echo site_url('admin/clientes/sub_index/'.(int) $sucursal->idusuario) ?>">Cancelar</a>
+		</div>
 	</form>
+
+	<?php if ($id) { ?>
+		<section class="pn-tarjeta c-7">
+			<div class="pn-tarjeta-cabecera">
+				<h2>Historial de impresiones</h2>
+				<span class="pn-extra"><?php echo p_numero(count($historial)) ?> declaraciones · <?php echo p_numero($total_historial) ?> impresiones</span>
+			</div>
+			<?php if (empty($historial)) { ?>
+				<div class="pn-vacio"><i class="ti-printer"></i>Esta impresora todavía no se declaró en ningún cierre.</div>
+			<?php } else { ?>
+				<div class="pn-tarjeta-cuerpo">
+					<p class="suave" style="font-size:13px;margin-bottom:10px">Impresiones por declaración<?php echo count($historial) > 60 ? ' (últimas 60)' : '' ?></p>
+					<div class="pn-grafico bajo"><canvas id="grafico-impresora" role="img" aria-label="Impresiones por declaración"></canvas></div>
+					<details class="pn-ver-tabla">
+						<summary>Ver todas las declaraciones</summary>
+						<div class="pn-tabla-contenedor" style="max-height:360px;overflow-y:auto">
+							<table class="pn-tabla">
+								<thead><tr><th>Fecha</th><th class="num">Impresiones</th></tr></thead>
+								<tbody>
+									<?php foreach ($historial as $h) { ?>
+										<tr><td><?php echo p_fecha($h->fecha) ?></td><td class="num"><?php echo p_numero($h->impresiones) ?></td></tr>
+									<?php } ?>
+								</tbody>
+							</table>
+						</div>
+					</details>
+				</div>
+				<script>
+				PanelGraficos.barras('grafico-impresora',
+					<?php echo json_encode(array_map(function ($h) { return date('j/n/y', strtotime($h->fecha)); }, $ultimos)) ?>,
+					[{ nombre: 'Impresiones', datos: <?php echo json_encode(array_map(function ($h) { return (int) $h->impresiones; }, $ultimos)) ?> }],
+					{ formato: 'numero' });
+				</script>
+			<?php } ?>
+		</section>
+	<?php } ?>
+</div>

@@ -1,207 +1,134 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
+/**
+ * Productos: listado con busqueda, alta/edicion (precio y stock por sucursal) y baja.
+ */
 class Productos extends MY_Controller
 {
-	private $dir = 'productos';
-	private $nom = 'Productos';
-	private $dir2 = 'Productos';
-
 	function __construct()
 	{
 		parent::__construct();
-		if($this->session->userdata('ubicacion')!= $this->dir)
-		{
-			$array_items = array('per_page' => NULL, 'sort_order' => NULL, 'sort_by' => NULL, );
-			$this->session->unset_userdata($array_items);
-			$this->session->set_userdata('ubicacion', $this->dir);
-		}
-		$this->load->model($this->dir.'_model','modelo',TRUE);
-		$this->data['dir'] = $this->dir;
-		$this->data['dir2'] = $this->dir2;
+		$this->load->model('admin/productos_model', 'productos');
 	}
 
-	function index($sort_by = 'nombre', $sort_order = 'asc', $offset = 0)
-{
-    $this->load->helper('text');
-    $this->load->library('pagination');
-    $this->load->library('table');
-
-    $this->data['fields'] = array(
-        'nombre' => 'Nombre',
-        'codigo' => 'Código',
-        'precio' => 'Precio de costo',
-        'porcentaje_marcado' => 'Porcentaje de marcado',
-        'precio_final' => 'Precio de venta',
-        'stock' => 'Stock total',
-        'fecha_vencimiento' => 'Fecha de vencimiento',
-    );
-
-    // --- Filtros y paginación ---
-    if ($this->get_search($this->dir) != '') $sql['search'] = $this->get_search($this->dir);
-    $sql['limit'] = $this->get_limit($this->dir);
-    $sql['sort_order'] = $this->get_sort_order($this->dir, $sort_order);
-    $sql['sort_by'] = $this->get_sort_by($this->dir, $sort_by);
-    $sql['offset'] = ($offset > 1) ? $offset : NULL;
-
-    $results = $this->modelo->getAll($sql);
-    $this->data['rows'] = $results['rows'];
-    $this->data['num_results'] = $results['num_rows'];
-
-    $config['base_url'] = site_url("admin/" . $this->dir . "/index/$sort_by/$sort_order");
-    $config['total_rows'] = $this->data['num_results'];
-    $config['per_page'] = $sql['limit'];
-    $this->pagination->initialize($config);
-
-    $this->data['pagination'] = $this->pagination->create_links();
-    $this->data['cur_page'] = $this->pagination->cur_page;
-    $this->data['pagination_tot'] = ceil(($config['total_rows'] / $this->pagination->per_page));
-
-    // --- Cargar modelos ---
-    $this->load->model('stockproductos_model', 'stockmodelo', TRUE);
-    $this->load->model('clientes_model', 'sucursales', TRUE);
-
-    $this->data['sucursales'] = $this->sucursales->getAll();
-
-    // --- Obtener stock por producto ---
-    $stocks_por_producto = [];
-    foreach ($results['rows'] as $producto) {
-        $stocks_por_producto[$producto->id] = $this->stockmodelo->get_by_producto($producto->id);
-    }
-    $this->data['stocks_por_producto'] = $stocks_por_producto;
-
-    $this->template->title($this->data['nombre'], 'Administración');
-    $this->template->build('admin/' . $this->dir . '/list', $this->data);
-}
-
-	function edit($id)
+	function index()
 	{
-		if($id!=0)
-		{
-			$sql['id'] = $id;
-			$results = $this->modelo->getAll($sql);
-			$this->data['row'] = $results['rows'][0];
-			$this->data['num_results'] = $results['num_rows'];
-		}
+		$q = trim((string) $this->input->get('q'));
+		$repetidos = (bool) $this->input->get('repetidos');
+		$orden = (string) $this->input->get('orden') ?: 'nombre';
+		$direccion = $this->input->get('dir') === 'desc' ? 'desc' : 'asc';
 
-		$this->load->model('stockproductos_model','stockmodelo',TRUE);
-		$this->load->model('clientes_model','sucursales',TRUE); // ahora apunta al modelo correcto
-		$this->data['sucursales'] = $this->sucursales->getAll(); // devuelve array de sucursales
-		$this->data['stocks'] = $this->stockmodelo->get_by_producto($id); // devuelve array de stocks
-
-		$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-
-		$this->template->title($this->data['nombre'].' :: Administración');
-		$this->template->build('admin/'.$this->dir.'/edit', $this->data);
+		$pag = $this->paginacion($this->productos->contar_panel($q, $repetidos), 50);
+		$this->data['lista'] = $this->productos->listar_panel($q, $repetidos, $orden, $direccion, $pag['por_pagina'], $pag['offset']);
+		$this->data['pag'] = $pag;
+		$this->data['q'] = $q;
+		$this->data['repetidos'] = $repetidos;
+		$this->data['orden'] = $orden;
+		$this->data['direccion'] = $direccion;
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/productos/edit/0'), 'texto' => 'Nuevo producto', 'icono' => 'ti-plus', 'clase' => 'principal'),
+		);
+		$this->mostrar('admin/productos/list', 'Productos', 'productos');
 	}
 
-
-	function update()
+	/** Alta (id 0) o edicion. */
+	function edit($id = 0)
 	{
-		$this->form_validation->set_rules('nombre', 'Nombre', 'required');
-
-		if ($this->form_validation->run() == FALSE)
+		$id = (int) $id;
+		$producto = $id ? $this->productos->obtener($id) : NULL;
+		if ($id && ! $producto)
 		{
-			$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Errores !</h4>".validation_errors()."</div>";
-			$this->template->title($this->data['nombre'].' :: Administración');
-			$this->template->build('admin/'.$this->dir.'/edit', $this->data);
+			p_flash('Ese producto no existe.', 'error');
+			redirect('admin/productos');
 		}
-		else
+
+		$sucursales = array_filter($this->sucursales(), function ($s) { return $s->activo == 1; });
+		$stock = $id ? $this->productos->stock_por_sucursal($id) : array();
+		$errores = array();
+		$valores = $producto ? (array) $producto : array('porcentaje_marcado' => 50);
+
+		if ($this->input->method() === 'post')
 		{
-			$id = $this->input->post('id');
-			/*----*/
-			$config['upload_path'] = 'assets/archivos/'.$this->dir.'/original/';
-			$config['allowed_types'] = 'gif|jpg|jpeg|png';
-			$config['max_size']	= '2000';
-			$config['carpeta'] = array();
-
-			$archivo='';
-			$error = NULL;
-
-			if (isset($_FILES['userfile']) && $_FILES['userfile']['name']!='')
-			{
-				$this->load->model('imagenes_model','',TRUE);
-				$archivo = $this->imagenes_model->do_upload($config);
-			}
-			if($archivo==FALSE) $this->index();
-			/*----*/
-
-
-			$fecha = explode("/", trim($this->input->post('fecha_vencimiento')));
-
-			list($day, $month, $year) = $fecha;
-
-			$unix_timestamp = mktime(0,0,0,$month,$day,$year);
-
-			$fecha= date('Y-m-d', $unix_timestamp);
-
-			if($this->input->post('precio_final') == '') {
-				$porcentaje = $this->input->post('precio') * $this->input->post('porcentaje_marcado') / 100;
-				$precio_final = $this->input->post('precio') + $porcentaje;
-			}
-			else {
-				$precio_final = $this->input->post('precio_final');
-			}
-
-
-
-			$objeto = array(
-				'nombre'=> $this->input->post('nombre'),
-				'codigo'=> $this->input->post('codigo'),
-				'precio'=> $this->input->post('precio'),
-				'stock'=> $this->input->post('stock'),
-				'orden'=> $this->input->post('orden'),
-				'precio_final'=> $precio_final,
-				'porcentaje_marcado'=> $this->input->post('porcentaje_marcado'),
-				'fecha_vencimiento'=> $fecha
+			$datos = array(
+				'nombre'             => trim((string) $this->input->post('nombre')),
+				'codigo'             => trim((string) $this->input->post('codigo')),
+				'precio'             => str_replace(',', '.', (string) $this->input->post('precio')),
+				'porcentaje_marcado' => str_replace(',', '.', (string) $this->input->post('porcentaje_marcado')),
+				'precio_final'       => str_replace(',', '.', (string) $this->input->post('precio_final')),
 			);
 
-			if($id==0)
+			if ($datos['nombre'] === '') $errores['nombre'] = 'El nombre es obligatorio.';
+			if ($datos['precio'] === '') $datos['precio'] = 0;
+			if ( ! is_numeric($datos['precio']) || $datos['precio'] < 0) $errores['precio'] = 'Tiene que ser un número.';
+			if ($datos['porcentaje_marcado'] === '') $datos['porcentaje_marcado'] = 0;
+			if ( ! is_numeric($datos['porcentaje_marcado'])) $errores['porcentaje_marcado'] = 'Tiene que ser un número.';
+			if ($datos['precio_final'] === '' && ! $errores)
 			{
-				$this->load->model('stockproductos_model','stockmodelo',TRUE);
-				$sucursales = $this->input->post('stock_sucursal');
-				if ($sucursales) {
-					foreach ($sucursales as $idusuario => $stock) {
-						$this->stockmodelo->save_or_update($id, $idusuario, $stock);
-					}
-				}
-				if($archivo!='') $objeto['logo'] = $archivo;
-				$id = $this->modelo->save($objeto);
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Guardado</div>";
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
+				// Si no se carga el precio de venta, se calcula con el costo + el porcentaje
+				$datos['precio_final'] = round($datos['precio'] * (1 + $datos['porcentaje_marcado'] / 100), 2);
 			}
-			else
+			if ( ! is_numeric($datos['precio_final']) || $datos['precio_final'] < 0) $errores['precio_final'] = 'Tiene que ser un número.';
+
+			$stock_nuevo = array();
+			foreach ((array) $this->input->post('stock') as $sucursal => $cantidad)
 			{
-				$this->load->model('stockproductos_model','stockmodelo',TRUE);
-				$sucursales = $this->input->post('stock_sucursal');
-				if ($sucursales) {
-					foreach ($sucursales as $idusuario => $stock) {
-						$this->stockmodelo->save_or_update($id, $idusuario, $stock);
-					}
-				}
-				if($archivo!='') $objeto['logo'] = $archivo;
-				$this->modelo->update($id,$objeto);
-				//echo $this->db->last_query();
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Modificado</div>";
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
+				if ( ! isset($sucursales[(int) $sucursal])) continue;
+				$stock_nuevo[(int) $sucursal] = max(0, (int) $cantidad);
 			}
+
+			if ( ! $errores)
+			{
+				$datos['precio'] = (float) $datos['precio'];
+				$datos['porcentaje_marcado'] = (int) round($datos['porcentaje_marcado']);
+				$datos['precio_final'] = (float) $datos['precio_final'];
+				// Stock total = suma de las sucursales (el sistema de ventas usa el de cada sucursal)
+				$datos['stock'] = array_sum($stock_nuevo + $stock);
+				if ( ! $id)
+				{
+					$datos['fecha_vencimiento'] = date('Y-m-d'); // campo sin uso, se completa por compatibilidad
+					$datos['orden'] = 0;
+				}
+
+				$this->db->trans_start();
+				$id_guardado = $this->productos->guardar($id, $datos);
+				$this->load->model('admin/stockproductos_model', 'stock_m');
+				foreach ($stock_nuevo as $sucursal => $cantidad) $this->stock_m->save_or_update($id_guardado, $sucursal, $cantidad);
+				$this->db->trans_complete();
+
+				$repetido = $this->productos->mismo_codigo($datos['codigo'], $id_guardado);
+				if ($repetido)
+					p_flash('Se guardó el producto, pero su código también lo tiene: '.implode(', ', array_map(function ($p) { return $p->nombre; }, $repetido)).'.', 'error');
+				else
+					p_flash($id ? 'Se guardó el producto.' : 'Se creó el producto.');
+				redirect('admin/productos/edit/'.$id_guardado);
+			}
+			$valores = array_merge($valores, $datos);
+			$stock = $stock_nuevo + $stock;
 		}
+
+		$this->data['id'] = $id;
+		$this->data['valores'] = $valores;
+		$this->data['errores'] = $errores;
+		$this->data['sucursales'] = $sucursales;
+		$this->data['stock'] = $stock;
+		$this->data['repetidos'] = $id ? $this->productos->mismo_codigo(isset($valores['codigo']) ? $valores['codigo'] : '', $id) : array();
+		$this->data['vendido'] = $id ? $this->productos->veces_vendido($id) : 0;
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/productos'), 'texto' => 'Productos', 'icono' => 'ti-arrow-left'),
+		);
+		if ($id) $this->data['acciones'][] = array('url' => site_url('admin/productos/edit/0'), 'texto' => 'Nuevo producto', 'icono' => 'ti-plus');
+		$this->mostrar('admin/productos/edit', $id ? 'Editar producto' : 'Nuevo producto', 'productos');
 	}
 
-	function delete()
+	function eliminar()
 	{
-		$this->modelo->delete($this->input->post('ele'));
-		$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Eliminado</div>";
-		$this->session->set_flashdata('template_msg', $this->data['message']);
-		redirect('admin/'.$this->dir.'/index', 'refresh');
-	}
-
-	function eliminar_img($id)
-	{
-		$this->modelo->delete_img($id);
-		$this->edit($id);
+		$this->solo_post();
+		$producto = $this->productos->obtener($this->input->post('id'));
+		if ($producto)
+		{
+			$this->productos->eliminar($producto->id);
+			p_flash('Se eliminó "'.$producto->nombre.'".');
+		}
+		redirect('admin/productos');
 	}
 }
-

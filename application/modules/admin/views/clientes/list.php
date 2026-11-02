@@ -1,95 +1,34 @@
-<script type="text/javascript">
-$(document).ready(function()
-{
-	<?php $this->load->view('partials/script_list.php'); ?>
-});
-	
-	
-</script>
-<?php 
-	$this->load->view('partials/delete_modal.php'); 
- 	$this->load->view('partials/page_header.php'); 
- ?>
-
-  <?php
- $cantidad = 0; 
- foreach($rows as $row){ $cantidad++;} ?>
-
-<div class="row">
-	<div class="span12">
-		<div class="widget widget-table">
-			<div class="widget-content">
-				<div id="example_wrapper" class="dataTables_wrapper form-inline" role="grid">
-					<?php // if(isset($message)) echo $message;?>
-					<div class="row">
-						<?php 
-							$this->load->view('partials/table_perpage.php');
-							$this->load->view('partials/search.php');
-						?>
-					</div>
-
-					<div class="row">
-						<p style="padding-left: 10px;margin-bottom: 0px;"> Cantidad de sucursales: <?php echo $num_results; ?> </p>
-					</div>
-					
-					<table id="list" class="table table-bordered table-striped table-highlight">
-						<?php $this->load->view('partials/table_header.php'); ?>
-						<form action="<?php echo base_url('admin/'.$dir.'/delete/');?>" id="delete-form" method="POST" class="form-horizontal">
-							<tbody>
-								<?php foreach($rows as $row): ?>
-
-									<?php
-
-									$estado = '';
-									$caja = '';
-
-									if($row->activo == 1)
-									{
-										$estado = 'Habilitado';
-									}
-									else
-									{
-										$estado = 'Deshabilitado';
-									}
-
-									if($row->caja_cerrada == 1)
-									{
-										$caja = 'Cerrada';
-									}
-									else
-									{
-										$caja = 'Abierta';
-									}
-
-									?>
-								<tr>
-									<td style="text-align:center;"><input type="checkbox" name="ele[]" id="ele_<?php echo $row->idusario;?>" class="ele" value="<?php echo $row->idusuario;?>" /></td>
-									<?php foreach($fields as $field_name => $field_display):
-										if($field_display == 'Estado'): ?>
-												<td>
-													<a href="<?php echo site_url('admin/'.$dir.'/edit/')."/".$row->idusuario;?>"><?php echo character_limiter($estado, 120); ?></a>			</a>
-												</td>
-										<?php 
-										elseif($field_display == 'Caja diaria'): ?>
-												<td>
-													<a href="<?php echo site_url('admin/'.$dir.'/edit/')."/".$row->idusuario;?>"><?php echo character_limiter($caja, 120); ?></a>			</a>
-												</td>
-										<?php 
-										else: ?>
-											<td>
-												<a href="<?php echo site_url('admin/'.$dir.'/edit/')."/".$row->idusuario;?>"><?php echo character_limiter($row->$field_name, 120); ?></a>
-											</td>
-										<?php
-										endif;
-									endforeach; ?>
-								</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</form>
-					</table>
-					<?php $this->load->view('partials/table_footer.php'); ?>
-				</div>
-			</div>
+<?php // Listado de sucursales. Datos de Clientes::index(). ?>
+<section class="pn-tarjeta">
+	<?php if (empty($lista)) { ?>
+		<div class="pn-vacio"><i class="ti-location-pin"></i>Todavía no hay sucursales. <a href="<?php echo site_url('admin/clientes/edit/0') ?>">Crear la primera</a></div>
+	<?php } else { ?>
+		<div class="pn-tabla-contenedor">
+			<table class="pn-tabla">
+				<thead>
+					<tr><th>Sucursal</th><th>Dirección</th><th>Contacto</th><th>Estado</th><th>Caja</th><th class="num">Impresoras</th><th>Último cierre</th><th class="compacto"><span class="sr">Acciones</span></th></tr>
+				</thead>
+				<tbody>
+					<?php foreach ($lista as $s) { ?>
+						<tr<?php echo $s->activo == 1 ? '' : ' class="tenue"' ?>>
+							<td>
+								<a class="principal-celda" href="<?php echo site_url('admin/clientes/edit/'.(int) $s->idusuario) ?>"><?php echo p_e(p_nombre_sucursal($s)) ?></a>
+								<div class="tenue">Usuario: <?php echo p_e($s->usuario) ?></div>
+							</td>
+							<td><?php echo p_e($s->domicilio) ?><div class="tenue"><?php echo p_e($s->localidad) ?></div></td>
+							<td><?php echo p_e($s->telefono) ?><div class="tenue"><?php echo p_e($s->email) ?></div></td>
+							<td><?php echo $s->activo == 1 ? '<span class="pn-etiqueta verde">Activa</span>' : '<span class="pn-etiqueta gris">Inactiva</span>' ?></td>
+							<td><?php echo $s->caja_cerrada == 1 ? '<span class="pn-etiqueta ambar">Cerrada</span>' : '<span class="pn-etiqueta verde">Abierta</span>' ?></td>
+							<td class="num"><?php echo (int) $s->impresoras ?></td>
+							<td class="suave"><?php echo $s->ultimo_cierre ? p_fecha($s->ultimo_cierre) : '—' ?></td>
+							<td class="acciones">
+								<a class="pn-boton chico" href="<?php echo site_url('admin/clientes/sub_index/'.(int) $s->idusuario) ?>"><i class="ti-printer"></i>Impresoras</a>
+								<a class="pn-boton chico" href="<?php echo site_url('admin/clientes/edit/'.(int) $s->idusuario) ?>">Editar</a>
+							</td>
+						</tr>
+					<?php } ?>
+				</tbody>
+			</table>
 		</div>
-	</div>	
-</div>	
+	<?php } ?>
+</section>

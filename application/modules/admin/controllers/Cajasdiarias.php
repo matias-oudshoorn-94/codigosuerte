@@ -1,181 +1,85 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
-	
-class Cajasdiarias extends MY_Controller 
+
+/**
+ * Cajas diarias: listado de cierres, detalle de cada cierre, eliminar y reabrir.
+ */
+class Cajasdiarias extends MY_Controller
 {
-	private $dir = 'cajasdiarias';
-	private $nom = 'Cajas diarias';
-	private $dir2 = 'Cajas diarias';
-	
 	function __construct()
 	{
 		parent::__construct();
-		if($this->session->userdata('ubicacion')!= $this->dir)
-		{		
-			$array_items = array('per_page' => NULL, 'sort_order' => NULL, 'sort_by' => NULL, );
-			$this->session->unset_userdata($array_items);
-			$this->session->set_userdata('ubicacion', $this->dir);
-		}			
-		$this->load->model($this->dir.'_model','modelo',TRUE); 
-		$this->data['dir'] = $this->dir;
-		$this->data['dir2'] = $this->dir2;
+		$this->load->model('Cajasdiarias_model', 'cajas');
 	}
-	
-	function index($sort_by = 'nombre', $sort_order = 'asc', $offset = 0)
-	{		   
-		$this->load->helper('text');
-        $this->load->library('pagination');
-        $this->load->library('table'); 
-		
-		$this->data['fields'] = array(
-			'fecha' => 'Fecha',
-			'nombre' => 'Nombre',
-			'localidad' => 'Localidad',
-			'cantidad_ventas' => 'Cant. Ventas',
-			'total' => 'Total',		
-			'impresiones_reales' => 'Impresiones reales',		
-			'impresiones_aprox' => 'Impresiones aprox',		
-			'desperdicio' => 'Desperdicio',		
+
+	function index()
+	{
+		$filtros = array(
+			'sucursal' => (int) $this->input->get('sucursal'),
+			'desde'    => p_fecha_valida($this->input->get('desde'), ''),
+			'hasta'    => p_fecha_valida($this->input->get('hasta'), ''),
 		);
-		//- search -
-		if($this->get_search($this->dir) != '') $sql['search'] = $this->get_search($this->dir);
-		//--
-		//- limit -		
-		$sql['limit'] = $this->get_limit($this->dir);
-		//--
-		//-	sort_order -
-		$sql['sort_order'] = $this->get_sort_order($this->dir, $sort_order);
-		//--
-		//-	sort_by -	
-		$sql['sort_by'] = $this->get_sort_by($this->dir, $sort_by);			
-		//--	
-		$sql['offset'] = ($offset>1)?$offset:NULL;
-		//var_dump($sql);
-		$results = $this->modelo->getAll($sql);
-				
-		$this->data['rows'] = $results['rows'];
-		$this->data['num_results'] = $results['num_rows'];
-		
-		$config = array();
-		$config['base_url'] = site_url("admin/".$this->dir."/index/$sort_by/$sort_order");
-		$config['total_rows'] = $this->data['num_results'];
-		$config['per_page'] = $sql['limit'];
-			
-		if($this->session->flashdata('template_msg'))
-			$this->data['message'] =	$this->session->flashdata('template_msg');
-		
-		$this->pagination->initialize($config); 
-		$this->data['pagination'] = $this->pagination->create_links();	
-		$this->data['cur_page'] = $this->pagination->cur_page;
-		$this->data['pagination_tot'] = ceil(($config['total_rows']/$this->pagination->per_page));
-		$this->data['action'] = site_url('admin/'.$this->dir.'/index');
-		$this->data['bnombre'] = $sql['bnombre'];
 
-		$this->template->title($this->data['nombre'], 'Administración');
-		$this->template->build('admin/'.$this->dir.'/list', $this->data);
+		$pag = $this->paginacion($this->cajas->contar($filtros), 30);
+		$this->data['filtros']    = $filtros;
+		$this->data['pag']        = $pag;
+		$this->data['cajas']      = $this->cajas->listar($filtros, $pag['por_pagina'], $pag['offset']);
+		$this->data['totales']    = $this->cajas->totales($filtros);
+		$this->data['sucursales'] = $this->sucursales();
+
+		$this->mostrar('admin/cajasdiarias/list', 'Cajas diarias', 'cajas');
 	}
-	
-	function edit($id)
+
+	/** Detalle de un cierre: resumen, medios de pago, impresiones y ventas del dia. */
+	function ver($id = 0)
 	{
-		if($id!=0)
-		{	
-			$sql['id'] = $id;	
-			$results = $this->modelo->getAll($sql);
-			$this->data['row'] = $results['rows'][0];
-			$this->data['num_results'] = $results['num_rows'];
-		}	
-		
-		$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-						
-		$this->template->title($this->data['nombre'].' :: Administración');
-		$this->template->build('admin/'.$this->dir.'/edit', $this->data);
-	}
-		
-	function update()
-	{
-		$this->form_validation->set_rules('nombre', 'Nombre', 'required');
-		
-		if ($this->form_validation->run() == FALSE)
+		$caja = $this->cajas->obtener($id);
+		if ( ! $caja)
 		{
-			$this->data['action'] = site_url('admin/'.$this->dir.'/update');
-			$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Errores !</h4>".validation_errors()."</div>";								
-			$this->template->title($this->data['nombre'].' :: Administración');
-			$this->template->build('admin/'.$this->dir.'/edit', $this->data);			
+			p_flash('Ese cierre de caja no existe.', 'error');
+			redirect('admin/cajasdiarias');
 		}
+
+		$sucursales = $this->sucursales();
+		$this->data['caja'] = $caja;
+		$this->data['sucursal'] = isset($sucursales[(int) $caja->id_usuario]) ? $sucursales[(int) $caja->id_usuario] : NULL;
+		$this->data['ventas'] = $this->cajas->ventas_del_dia($caja->id_usuario, $caja->fecha);
+
+		$titulo = 'Cierre del '.p_fecha($caja->fecha);
+		$this->data['acciones'] = array(
+			array('url' => site_url('admin/cajasdiarias?sucursal='.(int) $caja->id_usuario), 'texto' => 'Volver al listado', 'icono' => 'ti-arrow-left'),
+		);
+		$this->mostrar('admin/cajasdiarias/ver', $titulo, 'cajas');
+	}
+
+	/** Enlaces viejos: /admin/cajasdiarias/edit/{id} */
+	function edit($id = 0)
+	{
+		redirect('admin/cajasdiarias/ver/'.(int) $id);
+	}
+
+	function eliminar()
+	{
+		$this->solo_post();
+		$id = (int) $this->input->post('id');
+		if ($this->cajas->eliminar($id))
+			p_flash('Se eliminó el cierre de caja.');
 		else
-		{
-			$id = $this->input->post('id');
-			/*----*/
-			$config['upload_path'] = 'assets/archivos/'.$this->dir.'/original/';
-			$config['allowed_types'] = 'gif|jpg|jpeg|png';
-			$config['max_size']	= '2000';
-			$config['carpeta'] = array();
-			
-			$archivo='';
-			$error = NULL;
-			
-			if (isset($_FILES['userfile']) && $_FILES['userfile']['name']!='') 
-			{
-				$this->load->model('imagenes_model','',TRUE); 	
-				$archivo = $this->imagenes_model->do_upload($config);
-			}
-			if($archivo==FALSE) $this->index();
-			/*----*/
-
-
-			$fecha = explode("/", trim($this->input->post('fecha_vencimiento')));
-		
-			list($day, $month, $year) = $fecha;
-
-			$unix_timestamp = mktime(0,0,0,$month,$day,$year);
-
-			$fecha= date('Y-m-d', $unix_timestamp);
-
-			$porcentaje = $this->input->post('precio') * $this->input->post('porcentaje_marcado') / 100;
-
-			$precio_final = $this->input->post('precio') + $porcentaje;
-			
-			$objeto = array(
-				'nombre'=> $this->input->post('nombre'),
-				'codigo'=> $this->input->post('codigo'),
-				'precio'=> $this->input->post('precio'),
-				'orden'=> $this->input->post('orden'),
-				'precio_final'=> $precio_final,
-				'porcentaje_marcado'=> $this->input->post('porcentaje_marcado'),
-				'fecha_vencimiento'=> $fecha
-			);
-						
-			if($id==0)
-			{
-				if($archivo!='') $objeto['logo'] = $archivo;	
-				$id = $this->modelo->save($objeto);
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Guardado</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
-			} 
-			else
-			{
-				if($archivo!='') $objeto['logo'] = $archivo;	
-				$this->modelo->update($id,$objeto);
-				//echo $this->db->last_query();
-				$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Modificado</div>";	
-				$this->session->set_flashdata('template_msg', $this->data['message']);
-				redirect('admin/'.$this->dir.'/index', 'refresh');
-			}
-		}	
+			p_flash('No se pudo eliminar el cierre.', 'error');
+		redirect('admin/cajasdiarias');
 	}
-	
-	function delete()
+
+	/**
+	 * Reabre la caja de una sucursal (para que pueda volver a vender hoy).
+	 * El cierre guardado no se borra: al volver a cerrar se actualiza.
+	 */
+	function reabrir()
 	{
-		$this->modelo->delete($this->input->post('ele'));
-		$this->data['message'] = "<div class='alert alert-block'><a class='close' data-dismiss='alert' href='#'>&times;</a><h4 class='alert-heading'>Info !</h4>Registro Eliminado</div>";	
-		$this->session->set_flashdata('template_msg', $this->data['message']);				
-		redirect('admin/'.$this->dir.'/index', 'refresh');
-	}
-	
-	function eliminar_img($id)
-	{
-		$this->modelo->delete_img($id);
-		$this->edit($id);
+		$this->solo_post();
+		$sucursal = (int) $this->input->post('sucursal');
+		$this->db->set('caja_cerrada', 2)->where('idusuario', $sucursal)->update('usuarios');
+		p_flash('Se reabrió la caja de la sucursal.');
+		// Solo se vuelve a paginas del panel
+		$volver = (string) $this->input->post('volver');
+		redirect(preg_match('#^admin(/[A-Za-z0-9_/-]*)?(\?[A-Za-z0-9_=&%-]*)?$#', $volver) ? $volver : 'admin/cajasdiarias');
 	}
 }
-

@@ -1,141 +1,70 @@
 <?php
-class Cajasdiarias_model extends CI_Model{
-	private $tabla = 'cajas_diarias';
-	private $id = 'id';
-	private $busqueda = 'id';
-	private $order =  array('cajas_diarias.fecha');
+defined('BASEPATH') OR exit('No direct script access allowed');
 
-	function __construct()
+/**
+ * Cierres de caja (tabla cajas_diarias: una fila por sucursal y dia).
+ */
+class Cajasdiarias_model extends CI_Model
+{
+	private function filtrar($filtros)
 	{
-		parent::__construct();
+		if ( ! empty($filtros['sucursal'])) $this->db->where('c.id_usuario', (int) $filtros['sucursal']);
+		if ( ! empty($filtros['desde']))    $this->db->where('c.fecha >=', $filtros['desde']);
+		if ( ! empty($filtros['hasta']))    $this->db->where('c.fecha <=', $filtros['hasta']);
 	}
 
-	function getAll($objeto = array())
+	public function contar($filtros)
 	{
-
-		$this->db->select("cajas_diarias.id,
-							cajas_diarias.id_usuario,
-							cajas_diarias.fecha,
-							cajas_diarias.cantidad_ventas,
-							cajas_diarias.total,
-							cajas_diarias.total_efectivo,
-							cajas_diarias.total_transferencia,
-							cajas_diarias.total_medio_electronico,
-							cajas_diarias.total_tarjeta,
-							cajas_diarias.impresiones_reales,
-							cajas_diarias.impresiones_aprox,
-							cajas_diarias.desperdicio,
-							usuarios.idusuario,
-							usuarios.nombre as nombre,
-							usuarios.apellido as apellido,
-							usuarios.localidad as localidad,
-							usuarios.telefono as telefono,
-							usuarios.email as email,
-							usuarios.domicilio as domicilio
-							");
-
-		$this->db->join('usuarios', 'usuarios.idusuario = cajas_diarias.id_usuario', 'left');
-		if(isset($objeto['sort_order']))
-			$sort_order = ($objeto['sort_order'] == 'desc') ? 'desc' : 'asc';
-		$sort_columns = $this->order;
-		if(isset($objeto['sort_by']))
-			$sort_by = (in_array($objeto['sort_by'], $sort_columns)) ? $objeto['sort_by'] : $this->id;
-
-		// Qualification
-		//if(isset($objeto['bnombre'])) $this->db->like('n_rubro', $objeto['bnombre']);
-		//if(isset($objeto['id'])) $this->db->where($this->id, $objeto['id']);
-		if(isset($objeto['search'])) $this->db->where("(usuarios.nombre LIKE '%".$objeto['search']."%' OR usuarios.localidad LIKE '%".$objeto['search']."%')");
-		if(isset($objeto['id'])) $this->db->where('id', $objeto['id']);
-		if(isset($objeto['fecha'])) $this->db->where('fecha', $objeto['fecha']);
-
-		//if(isset($objeto['where'])) $this->db->where('rubros.borrado', $objeto['where']);
-
-		// limit / offset
-		if(isset($objeto['limit']) && isset($objeto['offset']))
-			$this->db->limit($objeto['limit'], ($objeto['limit']*($objeto['offset']-1)));
-		else if(isset($objeto['limit']))
-			$this->db->limit($objeto['limit']);
-
-		// order
-		if(isset($sort_by))
-			$this->db->order_by($sort_by, $sort_order);
-
-		$ret['rows'] = $this->db->get($this->tabla)->result();
-		//echo $this->db->last_query();
-		// count query
-		$q = $this->db->select('COUNT(*) as count', FALSE)
-			->from($this->tabla);
-
-		$tmp = $q->get()->result();
-
-		$ret['num_rows'] = $tmp[0]->count;
-
-		return $ret;
+		$this->db->from('cajas_diarias c');
+		$this->filtrar($filtros);
+		return $this->db->count_all_results();
 	}
 
-/**
- * Reporte parcial detallado por día
- * Compatible con columna DATETIME
- */
-public function getTotalesParcialDetalle($id_usuario, $fecha_desde, $fecha_hasta) {
-    return $this->db
-        ->select("DATE(fecha) as fecha, SUM(total) as total, SUM(cantidad_ventas) as cantidad")
-        ->from($this->tabla)
-        ->where('id_usuario', $id_usuario)
-        ->where("fecha >= '$fecha_desde 00:00:00'", NULL, FALSE)
-        ->where("fecha <= '$fecha_hasta 23:59:59'", NULL, FALSE)
-        ->group_by("DATE(fecha)")
-        ->order_by('fecha', 'ASC')
-        ->get()
-        ->result_array();
-}
+	public function totales($filtros)
+	{
+		$this->db->select('COALESCE(SUM(c.total),0) AS total, COALESCE(SUM(c.cantidad_ventas),0) AS ventas, COALESCE(SUM(c.impresiones_reales),0) AS impresiones', FALSE)
+			->from('cajas_diarias c');
+		$this->filtrar($filtros);
+		return $this->db->get()->row();
+	}
 
+	public function listar($filtros, $limite, $offset)
+	{
+		$this->db->select('c.*')->from('cajas_diarias c');
+		$this->filtrar($filtros);
+		return $this->db->order_by('c.fecha', 'DESC')->order_by('c.id', 'DESC')
+			->limit($limite, $offset)->get()->result();
+	}
 
-/**
- * Reporte total por mes
- * Compatible con columna DATE/DATETIME
- */
-public function getTotalesPorMes($id_usuario, $anio, $mes) {
-    // Generamos desde y hasta para el mes
-    $fecha_desde = "$anio-$mes-01";
-    $fecha_hasta = date("Y-m-t", strtotime($fecha_desde)); // último día del mes
+	public function obtener($id)
+	{
+		return $this->db->where('id', (int) $id)->get('cajas_diarias')->row();
+	}
 
-    return $this->db
-        ->select("SUM(total) as total_vendido,
-                  SUM(total_efectivo) as efectivo,
-                  SUM(total_transferencia) as transferencia,
-                  SUM(total_medio_electronico) as medio_electronico,
-                  SUM(total_tarjeta) as tarjeta")
-        ->from($this->tabla)
-        ->where('id_usuario', $id_usuario)
-        ->where("fecha >= '$fecha_desde'", NULL, FALSE)
-        ->where("fecha <= '$fecha_hasta'", NULL, FALSE)
-        ->get()
-        ->row_array(); // devuelvo array para que sea más fácil en la vista
-}
+	/** Ventas de una sucursal en un dia, con sus productos. */
+	public function ventas_del_dia($id_usuario, $fecha)
+	{
+		$ventas = $this->db->select('idpedido, fecha_hora, modo_de_pago, total')
+			->where('cod_clie', (string) (int) $id_usuario)->where('fecha', $fecha)
+			->order_by('idpedido', 'ASC')->get('pedidos')->result();
+		if ( ! $ventas) return array();
 
-/**
- * Ventas por día (para gráficos)
- */
-public function getVentasPorDia($id_usuario, $limite = 7) {
-    return $this->db
-        ->select("DATE(fecha) as fecha, SUM(total) as total")
-        ->from($this->tabla)
-        ->where('id_usuario', $id_usuario)
-        ->group_by("DATE(fecha)")
-        ->order_by('fecha', 'DESC')
-        ->limit($limite)
-        ->get()
-        ->result_array();
-}
+		$por_id = array();
+		foreach ($ventas as $v) { $v->items = array(); $por_id[(int) $v->idpedido] = $v; }
 
-	public function getUsuariosActivos() {
-    return $this->db
-        ->select("idusuario, nombre, apellido, localidad")
-        ->from("usuarios")
-        ->order_by("nombre", "asc")
-        ->get()
-        ->result();
-}
+		$items = $this->db->select('d.idpedido, d.cantidad, pr.nombre')
+			->from('pedidosdetalles d')
+			->join('productos pr', 'pr.id = d.id_articu', 'left')
+			->where_in('d.idpedido', array_keys($por_id))
+			->order_by('d.iddetalle', 'ASC')->get()->result();
+		foreach ($items as $item) $por_id[(int) $item->idpedido]->items[] = $item;
 
+		return array_values($por_id);
+	}
+
+	public function eliminar($id)
+	{
+		$this->db->where('id', (int) $id)->delete('cajas_diarias');
+		return $this->db->affected_rows() > 0;
+	}
 }
