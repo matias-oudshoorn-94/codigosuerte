@@ -3,19 +3,8 @@
 
 // Create connection
 
-$servername = "localhost";
-$username = "u245081402_codigosuerte";
-$password = "hlD@Dh5No^5O";
-$dbname = "u245081402_codigosuerte";
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-mysqli_set_charset($conn, 'utf8');
-// Check connection
-if ($conn->connect_error)
-{
-    die("Falló la conexión: " . $conn->connect_error);
-}
+// Reutiliza la conexion de CodeIgniter (config/database.php)
+$conn = get_instance()->db->conn_id;
 
 
 $sql = "SELECT * FROM pedidos WHERE fecha = '".$row->fecha."' AND cod_clie = '".$row->id_usuario."' order by idpedido asc";

@@ -12,4 +12,7 @@ qty.txt
 *.zip
 
 # Dumps de base de datos (contienen datos reales)
-*.sql
+/*.sql
+
+# Logs de CodeIgniter
+application/logs/log-*.php

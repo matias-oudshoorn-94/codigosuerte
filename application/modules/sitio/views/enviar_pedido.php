@@ -1,7 +1,6 @@
 <?php
 $base_url = base_url()."application/views/layouts";
 
-session_start();
 
 //echo($_SESSION['pago']);
 

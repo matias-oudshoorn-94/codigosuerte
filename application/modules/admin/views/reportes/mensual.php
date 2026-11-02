@@ -11,7 +11,7 @@
             </tr>
             <tr>
                 <td>$<?= number_format($reporte['total_vendido'], 2, ',', '.') ?></td>
-                <td>$<?= number_format($reporte['efecto'], 2, ',', '.') ?></td>
+                <td>$<?= number_format($reporte['efectivo'], 2, ',', '.') ?></td>
                 <td>$<?= number_format($reporte['tarjeta'], 2, ',', '.') ?></td>
                 <td>$<?= number_format($reporte['medio_electronico'], 2, ',', '.') ?></td>
                 <td>$<?= number_format($reporte['transferencia'], 2, ',', '.') ?></td>

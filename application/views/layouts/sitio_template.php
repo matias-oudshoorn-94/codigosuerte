@@ -5,38 +5,16 @@ $base_url = base_url()."application/views/layouts";
 
 //echo($this->session->userdata("user_data")[0]->caja_cerrada);
 
-$servername = "localhost";
-$username = "u245081402_codigosuerte";
-$password = "hlD@Dh5No^5O";
-$dbname = "u245081402_codigosuerte";
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-mysqli_set_charset($conn, 'utf8');
-// Check connection
-if ($conn->connect_error)
+// Estado de la caja de la sucursal logueada
+$caja_cerrada = null;
+$user_data = $this->session->userdata('user_data');
+if ( ! empty($user_data[0]->idusuario))
 {
-    die("Falló la conexión: " . $conn->connect_error);
-}
-
-$sql456 = "SELECT caja_cerrada FROM usuarios WHERE idusuario = '".$this->session->userdata("user_data")[0]->idusuario."' ";
-
-
-if ($conn->query($sql) === TRUE)
-{
-    //echo "New record created successfully";
-}
-else
-{
-    //echo "Error: " . $sql5 . "<br>" . $conn->error;
-}
-
-$resultado_caja = mysqli_query($conn,$sql456);
-
-
-while ($fila = mysqli_fetch_array($resultado_caja))
-{
-    $caja_cerrada = $fila['caja_cerrada'];
+    $fila = $this->db->select('caja_cerrada')
+        ->where('idusuario', $user_data[0]->idusuario)
+        ->get('usuarios')
+        ->row();
+    if ($fila) $caja_cerrada = $fila->caja_cerrada;
 }
 
 //echo $caja_cerrada;

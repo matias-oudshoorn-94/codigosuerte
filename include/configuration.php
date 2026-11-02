@@ -12,7 +12,8 @@ endif;
 $path = $_SERVER['DOCUMENT_ROOT'].'/';
 $live_site = 'http://codigosuerte.com.ar/';
 
-$servername = "localhost";
-$username = "u245081402_codigosuerte";
-$password = "hlD@Dh5No^5O";
-$dbname = "u245081402_codigosuerte";
+$servername = getenv('DB_HOST') ?: "localhost";
+$username = getenv('DB_USER') ?: "u245081402_codigosuerte";
+$password = getenv('DB_PASS') ?: "hlD@Dh5No^5O";
+$dbname = getenv('DB_NAME') ?: "u245081402_codigosuerte";
+if (getenv('DB_PORT')) { ini_set('mysqli.default_port', getenv('DB_PORT')); }

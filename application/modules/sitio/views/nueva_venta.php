@@ -33,8 +33,8 @@ if ($productos_json === false)
     // Algún nombre con caracteres no UTF-8: convertirlos y reintentar.
     foreach ($productos_js as &$p)
     {
-        $p['nombre'] = utf8_encode($p['nombre']);
-        $p['codigo'] = utf8_encode($p['codigo']);
+        $p['nombre'] = iconv('ISO-8859-1', 'UTF-8', $p['nombre']);
+        $p['codigo'] = iconv('ISO-8859-1', 'UTF-8', $p['codigo']);
     }
     unset($p);
     $productos_json = json_encode($productos_js, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);

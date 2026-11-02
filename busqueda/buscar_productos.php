@@ -50,7 +50,7 @@ while ($fila = mysqli_fetch_assoc($result)) {
 
     echo '<tr>
             <td style="text-transform: uppercase; font-size:14px; font-weight:600;color:#000">'.$fila['codigo'].'</td>
-            <td style="text-transform: uppercase; font-size:16px; font-weight:600;color:#000">'.utf8_encode($fila['nombre']).'</td>
+            <td style="text-transform: uppercase; font-size:16px; font-weight:600;color:#000">'.iconv('ISO-8859-1', 'UTF-8', $fila['nombre']).'</td>
             <td style="text-transform: uppercase; font-size:14px; font-weight:600;color:#000">'.$fila['precio_final'].'</td>
             <td style="font-size:14px; font-weight:600;color:#000">'.$stock_actual.'</td>
             <td><input id="'.$nombre_cantidad.'" value="1" type="number" name="quantity" min="1" max="99" style="height: 40px;padding-left: 20px;font-weight: 500;margin-bottom: 0px;font-size:16px; font-weight:600;color:#000;background: #d0d0d0;border: 2px solid #47b475;"></td>

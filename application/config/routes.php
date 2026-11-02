@@ -41,6 +41,7 @@
 $route['default_controller'] = "sitio";
 
 $route['404_override'] = '';
+$route['translate_uri_dashes'] = FALSE;
 
 $route['enviar_contacto'] = "sitio/enviar_contacto";
 
@@ -133,6 +134,7 @@ $route['nueva_venta'] = "sitio/nueva_venta";
 $route['nueva_venta2'] = "sitio/nueva_venta2";
 
 $route['enviar_pedido'] = "sitio/enviar_pedido";
+$route['set_pago'] = "sitio/set_pago";
 
 $route['pedidos'] = "sitio/pedidos";
 
