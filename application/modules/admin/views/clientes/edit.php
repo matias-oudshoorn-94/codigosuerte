@@ -145,7 +145,7 @@ $(document).ready(function()
 								<div class="control-group">
 						            <label class="control-label">Activo</label>
 						            <div class="controls">
-						              <?php $activo = (isset($row->activo))?$row->activo:2; 
+						              <?php $activo = (isset($row->activo))?$row->activo:1; 
 						            	$si=($activo == 1)?TRUE:FALSE;	
 						            	$no=($activo == 2)?TRUE:FALSE;
 

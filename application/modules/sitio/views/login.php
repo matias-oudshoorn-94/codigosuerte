@@ -19,7 +19,7 @@ $base_url = base_url()."application/views/layouts";
                             <div class="feature bordered text-center">
                                 <h4 class="uppercase">Ingresar</h4>
                                 <form class="text-left"  action="<?php echo base_url() ?>loginProc" method="post">
-                                    <input class="mb0" type="text" name="telefono" value="" id="emmail_login" placeholder="Usuario" required/>
+                                    <input class="mb0" type="text" name="usuario" value="" id="emmail_login" placeholder="Usuario" autocomplete="username" required/>
                                     <input class="mb0" name="clave" value="" id="password_login" type="password" placeholder="Contraseña" />
                                     <p style="color:#C5202B;">
                                      <?php if (isset($msg)) {echo $msg; } ?>

@@ -82,7 +82,7 @@ class Sitio extends MX_Controller
 
 			$this->template->title('Iniciar sesión | PDF Color');
 
-			$this->template->build('sitio/home', $this->data);
+			$this->template->build('sitio/login', $this->data);
 
 		}
 
