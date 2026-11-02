@@ -87,7 +87,7 @@ foreach ($ventas_por_medio as $fila)
 .in-aviso a { margin-left: auto; font-weight: 600; color: #7a5208; text-decoration: underline; }
 
 /* Paneles */
-.in-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; }
+.in-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
 .in-panel { background: #fff; border: 1px solid var(--in-borde); border-radius: 12px; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); }
 .in-panel-cabecera { padding: 16px 20px; border-bottom: 1px solid var(--in-borde); display: flex; align-items: center; gap: 10px; }
 .in-panel-cabecera i { color: var(--in-texto-suave); font-size: 16px; }
@@ -121,6 +121,23 @@ foreach ($ventas_por_medio as $fila)
 .in-sin { padding: 34px 20px; text-align: center; color: var(--in-texto-suave); font-size: 14px; }
 .in-sin i { display: block; font-size: 28px; margin-bottom: 8px; color: #c3cad3; }
 
+.in-columna { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+/* Clima */
+.in-clima-cuerpo { padding: 18px 20px 16px; display: flex; align-items: center; gap: 16px; }
+.in-clima-cuerpo .clima-icono { width: 56px; height: 56px; flex: none; color: #8a96a3; }
+.in-clima-temp { font-size: 38px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.in-clima-desc { font-size: 15px; font-weight: 600; margin-top: 4px; }
+.in-clima-sens { font-size: 13px; color: var(--in-texto-suave); margin-top: 2px; }
+.in-clima-datos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--in-borde); }
+.in-clima-datos > div { padding: 12px 20px; font-size: 13px; color: var(--in-texto-suave); }
+.in-clima-datos > div + div { border-left: 1px solid var(--in-borde); }
+.in-clima-datos b { display: block; color: var(--in-texto); font-size: 15px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.in-clima-horas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--in-borde); padding: 10px 8px; }
+.in-clima-hora { text-align: center; font-size: 12px; color: var(--in-texto-suave); }
+.in-clima-hora .clima-icono { width: 26px; height: 26px; display: block; margin: 4px auto; color: #8a96a3; }
+.in-clima-hora b { display: block; color: var(--in-texto); font-size: 14px; font-weight: 600; }
+.in-clima-estado { padding: 26px 20px; text-align: center; color: var(--in-texto-suave); font-size: 14px; }
 @media (max-width: 991px) { .in-grid { grid-template-columns: 1fr; } }
 @media (max-width: 767px) {
     .in { padding-top: 20px; }
@@ -216,6 +233,17 @@ foreach ($ventas_por_medio as $fila)
                 </div>
             </div>
 
+            <div class="in-columna">
+
+            <!-- Clima -->
+            <div class="in-panel" id="in-clima">
+                <div class="in-panel-cabecera">
+                    <i class="ti-location-pin"></i>
+                    <h2>Clima en Mar del Plata</h2>
+                </div>
+                <div class="in-clima-estado" id="in-clima-estado">Cargando clima…</div>
+            </div>
+
             <!-- Ultimas ventas -->
             <div class="in-panel">
                 <div class="in-panel-cabecera">
@@ -238,6 +266,40 @@ foreach ($ventas_por_medio as $fila)
                 <?php } ?>
             </div>
 
+            </div>
+
         </div>
     </div>
 </section>
+
+<script type="text/javascript">
+// Tarjeta de clima (datos de js/clima.js, cargado en el header)
+(function () {
+    var panel = document.getElementById('in-clima');
+    var estado = document.getElementById('in-clima-estado');
+    if (!panel || !window.Clima) { if (panel) panel.remove(); return; }
+
+    function g(n) { return Math.round(n) + '°'; }
+
+    Clima.obtener().then(function (c) {
+        var horas = [1, 3, 5, 7].map(function (i) { return c.horas[i]; }).filter(Boolean);
+        var html = '<div class="in-clima-cuerpo">' + Clima.icono(c.codigo, c.esDeDia)
+            + '<div><div class="in-clima-temp">' + g(c.temperatura) + '</div>'
+            + '<div class="in-clima-desc">' + Clima.descripcion(c.codigo) + '</div>'
+            + '<div class="in-clima-sens">Sensación ' + g(c.sensacion) + ' · Humedad ' + Math.round(c.humedad) + '%</div></div></div>'
+            + '<div class="in-clima-datos">'
+            + '<div>Máx / Mín<b>' + g(c.maxima) + ' / ' + g(c.minima) + '</b></div>'
+            + '<div>Prob. de lluvia<b>' + (c.lluvia == null ? '—' : Math.round(c.lluvia) + '%') + '</b></div>'
+            + '<div>Viento<b>' + Math.round(c.viento) + ' km/h</b></div>'
+            + '</div>';
+        if (horas.length) {
+            html += '<div class="in-clima-horas">' + horas.map(function (h) {
+                return '<div class="in-clima-hora">' + h.hora + Clima.icono(h.codigo, h.esDeDia) + '<b>' + g(h.temperatura) + '</b></div>';
+            }).join('') + '</div>';
+        }
+        estado.outerHTML = html;
+    }).catch(function () {
+        estado.textContent = 'No se pudo cargar el clima en este momento.';
+    });
+})();
+</script>

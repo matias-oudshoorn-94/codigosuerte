@@ -387,6 +387,14 @@ function quitarArt(idArticulo, reloadPage, deleteAll)
         }
         .hd-hoy:hover { background: rgba(255,255,255,.09); color: #e7eaee; }
         .hd-hoy b { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+        /* Clima (se completa con js/clima.js) */
+        .hd-clima {
+            display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 12px 0 10px; border-radius: 10px;
+            background: rgba(255,255,255,.05); color: #b9c0c8; font-size: 13px; white-space: nowrap;
+        }
+        .hd-clima[hidden] { display: none; }
+        .hd-clima .clima-icono { width: 22px; height: 22px; flex: none; color: #d5dbe2; }
+        .hd-clima b { color: #fff; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
         .hd-punto { width: 8px; height: 8px; border-radius: 50%; background: #47b475; box-shadow: 0 0 0 3px rgba(71,180,117,.2); flex: none; }
         .hd-punto.cerrada { background: #e0a43a; box-shadow: 0 0 0 3px rgba(224,164,58,.2); }
 
@@ -442,6 +450,7 @@ function quitarArt(idArticulo, reloadPage, deleteAll)
         @media print { .hd { display: none !important; } }
         </style>
 
+        <script src="<?php echo $base_url ?>/js/clima.js?v=1"></script>
         <header class="hd" id="hd">
             <div class="hd-barra">
                 <a class="hd-logo" href="<?php echo base_url() ?>"><img src="<?php echo $base_url ?>/img/logo2.png" alt="PDF Color"></a>
@@ -453,6 +462,7 @@ function quitarArt(idArticulo, reloadPage, deleteAll)
                 </ul>
 
                 <div class="hd-derecha">
+                    <span class="hd-clima" id="hd-clima" hidden title="Clima en Mar del Plata"></span>
                     <?php if ($hd_usuario) { ?>
                         <a class="hd-hoy" href="<?php echo base_url() ?>pedidos" title="<?php echo $hd_caja_cerrada ? 'Caja cerrada hoy' : 'Caja abierta' ?>">
                             <span class="hd-punto<?php echo $hd_caja_cerrada ? ' cerrada' : '' ?>"></span>
@@ -548,6 +558,18 @@ function quitarArt(idArticulo, reloadPage, deleteAll)
         </script>
 
 
+        <script type="text/javascript">
+        // Temperatura actual en el header
+        (function () {
+            var chip = document.getElementById('hd-clima');
+            if (!chip || !window.Clima) return;
+            Clima.obtener().then(function (c) {
+                chip.innerHTML = Clima.icono(c.codigo, c.esDeDia) + '<b>' + Math.round(c.temperatura) + '°</b>';
+                chip.title = 'Mar del Plata: ' + Clima.descripcion(c.codigo) + ', sensación ' + Math.round(c.sensacion) + '°';
+                chip.hidden = false;
+            }).catch(function () { /* sin clima: no se muestra nada */ });
+        })();
+        </script>
         <div class="main-container">
 
         <?php echo $template['body'];?>
